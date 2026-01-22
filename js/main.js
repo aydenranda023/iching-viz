@@ -9,9 +9,12 @@ import { initGyro, updateGyro } from './gyro.js';
 
 // --- 1. 基础场景设置 (参考 index.html) ---
 const scene = new THREE.Scene();
-const bgColor = 0xd1d1d1; // 浅灰背景
-scene.background = new THREE.Color(bgColor);
-scene.fog = new THREE.FogExp2(bgColor, 0.01); // 浅色雾气
+const scene = new THREE.Scene();
+const bgColorLight = new THREE.Color(0xd1d1d1); // 浅灰 (黑粒子背景)
+const bgColorDark = new THREE.Color(0x333333);  // 深灰 (白粒子背景) - 稍微深一点增强对比
+scene.background = bgColorLight.clone();
+// Fog 也会随背景变色，在 animate 中更新
+scene.fog = new THREE.FogExp2(0xd1d1d1, 0.01);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
 
@@ -40,13 +43,60 @@ controls.autoRotateSpeed = 0.15;
 controls.autoRotateSpeed = 0.15;
 // 禁用平移，固定中心
 controls.enablePan = false;
+// 禁用相机旋转，改为单独控制八卦旋转
+controls.enableRotate = false;
 // 默认禁用原生缩放（使用下方自定义滚轮逻辑），但在移动端 Touch 时开启
 controls.enableZoom = false;
 
-// 移动端交互优化：触屏开始时开启原生缩放（支持 Pinch），鼠标操作时关闭（避免冲突）
-renderer.domElement.addEventListener('touchstart', () => {
-    controls.enableZoom = true;
+// --- 自定义交互逻辑 ---
+// 1. 移动端/桌面端 通用拖拽旋转八卦
+let isDragging = false;
+let previousMsgX = 0;
+
+function onPointerDown(x) {
+    isDragging = true;
+    previousMsgX = x;
+}
+
+function onPointerMove(x) {
+    if (!isDragging) return;
+    const deltaX = x - previousMsgX;
+    previousMsgX = x;
+
+    // 旋转八卦 (反向使其符合直觉: 向左滑 -> 逆时针?)
+    // 试一下正向
+    if (baguaSystem) {
+        baguaSystem.rotation.z += deltaX * 0.005;
+    }
+}
+
+function onPointerUp() {
+    isDragging = false;
+}
+
+// Mouse Events
+renderer.domElement.addEventListener('mousedown', (e) => onPointerDown(e.clientX));
+renderer.domElement.addEventListener('mousemove', (e) => onPointerMove(e.clientX));
+renderer.domElement.addEventListener('mouseup', onPointerUp);
+
+// Touch Events
+renderer.domElement.addEventListener('touchstart', (e) => {
+    controls.enableZoom = true; // 允许缩放
+    if (e.touches.length === 1) {
+        onPointerDown(e.touches[0].clientX);
+    }
 }, { passive: true });
+
+renderer.domElement.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1) {
+        onPointerMove(e.touches[0].clientX);
+    }
+}, { passive: true });
+
+renderer.domElement.addEventListener('touchend', () => {
+    onPointerUp();
+    // 只有在没有手指时才需要考虑 status, 这里 OrbitControls 自己会处理 zoom 结束
+});
 
 // 自定义滚轮缩放逻辑
 const zoomStep = 1.1; // 每次缩放 10%
