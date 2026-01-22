@@ -10,7 +10,7 @@ import { initGyro, updateGyro } from './gyro.js';
 // --- 1. 基础场景设置 (参考 index.html) ---
 const scene = new THREE.Scene();
 const bgColorLight = new THREE.Color(0xd1d1d1); // 浅灰 (黑粒子背景)
-const bgColorDark = new THREE.Color(0x333333);  // 深灰 (白粒子背景) - 稍微深一点增强对比
+const bgColorDark = new THREE.Color(0x777777);  // 中灰 (白粒子背景) - 从 0x333333 提亮，减淡约 40%
 scene.background = bgColorLight.clone();
 // Fog 也会随背景变色，在 animate 中更新
 scene.fog = new THREE.FogExp2(0xd1d1d1, 0.01);
@@ -49,12 +49,17 @@ controls.enableZoom = false;
 
 // --- 自定义交互逻辑 ---
 // 1. 移动端/桌面端 通用拖拽旋转八卦
+// 1. 移动端/桌面端 通用拖拽旋转八卦
 let isDragging = false;
 let previousMsgX = 0;
+let baguaVelocity = 0; // 旋转速度 (惯性)
+let lastPointerTime = 0;
 
 function onPointerDown(x) {
     isDragging = true;
     previousMsgX = x;
+    baguaVelocity = 0; // 按下时停止惯性
+    lastPointerTime = performance.now();
 }
 
 function onPointerMove(x) {
@@ -65,7 +70,11 @@ function onPointerMove(x) {
     // 旋转八卦 (反向使其符合直觉: 向左滑 -> 逆时针?)
     // 试一下正向
     if (baguaSystem) {
-        baguaSystem.rotation.z += deltaX * 0.005;
+        const rotateDelta = deltaX * 0.005;
+        baguaSystem.rotation.z += rotateDelta;
+
+        // 计算瞬时速度 (简单移动平均或直接赋值)
+        baguaVelocity = rotateDelta;
     }
 }
 
@@ -159,11 +168,23 @@ function animate() {
     // 之前的 updateBagua 会覆盖 rotation.z。
     // 我们在这里直接操作 baguaSystem，不再调用 updateBagua
     if (baguaSystem) {
-        // 自动微转 (很慢)
-        baguaSystem.rotation.z -= 0.0005;
-        // 呼吸摇摆
-        const wobble = Math.sin(time * 0.5) * 0.001;
-        baguaSystem.rotation.z += wobble;
+        // 如果正在拖拽，速度由 onPointerMove 控制
+        // 如果松手 (惯性阶段)
+        if (!isDragging) {
+            baguaSystem.rotation.z += baguaVelocity;
+            // 摩擦力衰减 (0.95 -> 几秒内停下)
+            baguaVelocity *= 0.95;
+
+            // 当速度极小时归零，避免无休止计算
+            if (Math.abs(baguaVelocity) < 0.00001) {
+                baguaVelocity = 0;
+
+                // 静止时添加原本的微弱 wobble (呼吸感)
+                // 注意：这需要在 velocity 归零后才生效，否则会冲突
+                const wobble = Math.sin(time * 0.5) * 0.001;
+                baguaSystem.rotation.z += wobble;
+            }
+        }
     }
 
     // 更新陀螺仪视差
@@ -181,6 +202,29 @@ function animate() {
 
     scene.background.lerpColors(bgColorLight, bgColorDark, bgLerpFactor);
     scene.fog.color.copy(scene.background);
+
+    // --- 文字颜色同步 ---
+    // bgLerpFactor: 0 (Light BG) -> 1 (Dark BG)
+    // text color: Black -> White
+    const textEl = document.getElementById('dynamic-text');
+    if (textEl) {
+        // 简单的 0-255 插值
+        const val = Math.floor(bgLerpFactor * 255);
+        // 背景越黑(1)，文字越白(255)。 背景越亮(0)，文字越黑(0)。
+        // 错误：背景亮 (0) -> 文字黑 (0)。 背景黑 (1) -> 文字白 (255)
+        // 也就是 val = bgLerpFactor * 255.
+        // 但文字原本是 #333 (非纯黑) 和 #fff (纯白)。
+        // 让我们稍微细腻一点：
+        // Start: rgb(51, 51, 51) (Light BG)
+        // End:   rgb(255, 255, 255) (Dark BG)
+        const startC = 51;
+        const endC = 255;
+        const currentC = Math.floor(startC + (endC - startC) * bgLerpFactor);
+        textEl.style.color = `rgb(${currentC}, ${currentC}, ${currentC})`;
+
+        // 只有白色背景时需要阴影来看清? 或者一直保持阴影?
+        // 原 CSS 有 text-shadow, 这里保持即可。
+    }
 
     controls.update();
     renderer.render(scene, camera);
