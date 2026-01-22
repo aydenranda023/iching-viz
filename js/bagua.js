@@ -79,3 +79,14 @@ export function updateBagua(time) {
         baguaGroup.rotation.z = baseRotation + wobble;
     }
 }
+
+export function resizeBagua(aspect) {
+    if (!baguaGroup) return;
+
+    // 如果是竖屏 (mobile)，显著缩小八卦图
+    // 横屏 Scale = 1.5, 竖屏 Scale = 0.8 (可根据实际效果微调)
+    const baseScale = 1.5;
+    const targetScale = aspect < 1 ? baseScale * 0.55 : baseScale;
+
+    baguaGroup.scale.set(targetScale, targetScale, targetScale);
+}

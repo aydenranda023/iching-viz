@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // 导入我们的三个子模块
 import { createParticles, updateParticles } from './particles.js';
-import { createBagua, updateBagua } from './bagua.js';
+import { createBagua, updateBagua, resizeBagua } from './bagua.js';
 import { initText } from './text.js';
 
 // --- 1. 基础场景设置 (参考 index.html) ---
@@ -20,6 +20,9 @@ function updateCameraPosition() {
     // 如果是竖屏（手机），拉远相机以完整显示内容
     const baseDistance = 4.5;
     camera.position.z = aspect < 1 ? baseDistance * 1.8 : baseDistance;
+
+    // 同时调整八卦图的大小
+    resizeBagua(aspect);
 }
 updateCameraPosition(); // 初始化调用
 
@@ -107,7 +110,5 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     // 窗口大小改变时，也重新评估相机距离（例如手机横竖屏切换）
-    // 注意：如果我们已经手动缩放过，这里可能会重置距离，这是一种权衡。
-    // 为了体验更好，我们可以只在大幅度改变（即横竖屏切换）时调整。
-    // updateCameraPosition(); // 暂时不强制重置，避免用户缩放后被重置
+    updateCameraPosition();
 });

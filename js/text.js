@@ -11,18 +11,28 @@ export function initText() {
     let textIndex = 0;
     const textElement = document.getElementById('dynamic-text');
 
-    // 初始显示
-    textElement.innerHTML = textContent[0];
-
-    // 定时轮播 (12秒周期)
-    setInterval(() => {
-        textIndex = (textIndex + 1) % textContent.length;
-        // 这里只是更新内容，淡入淡出由 CSS animation 处理
-        // 为了配合 CSS 动画的 fadeCycle，我们在 opacity 接近 0 时切换文字
-        // 动画总长 12s, 0% 和 100% 是 opacity:0
-        // 所以我们在周期开始时更新即可
-        setTimeout(() => {
+    async function runTextCycle() {
+        while (true) {
+            // 1. 设置内容
             textElement.innerHTML = textContent[textIndex];
-        }, 1000); 
-    }, 12000); 
+
+            // 2. 淡入 (添加 class) —— 需要一点延迟确保 DOM 更新
+            await new Promise(r => setTimeout(r, 100));
+            textElement.classList.add('visible');
+
+            // 3. 停留阅读 (比如 5秒)
+            await new Promise(r => setTimeout(r, 5000));
+
+            // 4. 淡出 (移除 class)
+            textElement.classList.remove('visible');
+
+            // 5. 等待淡出完成 (transition 1.5s，这里多给一点冗余 1.6s)
+            await new Promise(r => setTimeout(r, 1600));
+
+            // 6. 切换下一条
+            textIndex = (textIndex + 1) % textContent.length;
+        }
+    }
+
+    runTextCycle();
 }
