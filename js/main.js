@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createParticles, updateParticles } from './particles.js';
 import { createBagua, updateBagua, resizeBagua } from './bagua.js';
 import { initText } from './text.js';
+import { initGyro, updateGyro } from './gyro.js';
 
 // --- 1. 基础场景设置 (参考 index.html) ---
 const scene = new THREE.Scene();
@@ -36,8 +37,16 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.03;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.15;
-// 禁用默认缩放，使用自定义步进缩放
+controls.autoRotateSpeed = 0.15;
+// 禁用平移，固定中心
+controls.enablePan = false;
+// 默认禁用原生缩放（使用下方自定义滚轮逻辑），但在移动端 Touch 时开启
 controls.enableZoom = false;
+
+// 移动端交互优化：触屏开始时开启原生缩放（支持 Pinch），鼠标操作时关闭（避免冲突）
+renderer.domElement.addEventListener('touchstart', () => {
+    controls.enableZoom = true;
+}, { passive: true });
 
 // 自定义滚轮缩放逻辑
 const zoomStep = 1.1; // 每次缩放 10%
@@ -84,6 +93,9 @@ scene.add(camera);       // <--- 关键：把相机加到场景里（否则相�
 // C. 启动文字系统
 initText();
 
+// D. 启动陀螺仪 (视差效果)
+initGyro(particleSystem, baguaSystem);
+
 // --- 3. 动画循环 ---
 const clock = new THREE.Clock();
 
@@ -95,6 +107,9 @@ function animate() {
 
     // 更新八卦旋转
     updateBagua(time);
+
+    // 更新陀螺仪视差
+    updateGyro();
 
     controls.update();
     renderer.render(scene, camera);
