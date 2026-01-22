@@ -9,7 +9,6 @@ import { initGyro, updateGyro } from './gyro.js';
 
 // --- 1. 基础场景设置 (参考 index.html) ---
 const scene = new THREE.Scene();
-const scene = new THREE.Scene();
 const bgColorLight = new THREE.Color(0xd1d1d1); // 浅灰 (黑粒子背景)
 const bgColorDark = new THREE.Color(0x333333);  // 深灰 (白粒子背景) - 稍微深一点增强对比
 scene.background = bgColorLight.clone();
@@ -153,13 +152,35 @@ function animate() {
     const time = clock.getElapsedTime();
 
     // 更新粒子 Shader 时间
+    // 更新粒子 Shader 时间
     updateParticles(time);
 
-    // 更新八卦旋转
-    updateBagua(time);
+    // 更新八卦旋转 (保留自动旋转作为基底，叠加用户旋转?)
+    // 之前的 updateBagua 会覆盖 rotation.z。
+    // 我们在这里直接操作 baguaSystem，不再调用 updateBagua
+    if (baguaSystem) {
+        // 自动微转 (很慢)
+        baguaSystem.rotation.z -= 0.0005;
+        // 呼吸摇摆
+        const wobble = Math.sin(time * 0.5) * 0.001;
+        baguaSystem.rotation.z += wobble;
+    }
 
     // 更新陀螺仪视差
     updateGyro();
+
+    // --- 背景色呼吸逻辑 ---
+    // particles.js: slowCycle = sin(uTime * 0.15) * 0.5 + 0.5;
+    // 0 (White Cloud) -> Dark BG
+    // 1 (Black Cloud) -> Light BG
+    const slowCycle = Math.sin(time * 0.15) * 0.5 + 0.5;
+
+    // 插值 factor: 当 slowCycle 小时，BG Dark (factor -> 1). 当 slowCycle 大时，BG Light (factor -> 0)
+    // 也就是 factor = 1 - slowCycle
+    const bgLerpFactor = 1 - slowCycle;
+
+    scene.background.lerpColors(bgColorLight, bgColorDark, bgLerpFactor);
+    scene.fog.color.copy(scene.background);
 
     controls.update();
     renderer.render(scene, camera);
