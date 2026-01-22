@@ -89,4 +89,6 @@ export function resizeBagua(aspect) {
     const targetScale = aspect < 1 ? baseScale * 0.55 : baseScale;
 
     baguaGroup.scale.set(targetScale, targetScale, targetScale);
+    // 存储基础缩放值，供 main.js 的滞后缩放逻辑使用
+    baguaGroup.userData.baseScale = targetScale;
 }
