@@ -46,6 +46,10 @@ controls.enablePan = false;
 controls.enableRotate = false;
 // 默认禁用原生缩放（使用下方自定义滚轮逻辑），但在移动端 Touch 时开启
 controls.enableZoom = false;
+// 缩放目标距离 (用于实现丝滑的粘滞感)
+let targetZoomDist = 0;
+// 初始化标记
+let isZoomInit = false;
 
 // --- 自定义交互逻辑 ---
 // 1. 移动端/桌面端 通用拖拽旋转八卦
@@ -70,7 +74,7 @@ function onPointerMove(x) {
     // 旋转八卦 (反向使其符合直觉: 向左滑 -> 逆时针?)
     // 试一下正向
     if (baguaSystem) {
-        const rotateDelta = deltaX * 0.005;
+        const rotateDelta = deltaX * 0.012; // 0.005 -> 0.012 提高灵敏度
         baguaSystem.rotation.z += rotateDelta;
 
         // 计算瞬时速度 (简单移动平均或直接赋值)
@@ -107,34 +111,31 @@ renderer.domElement.addEventListener('touchend', () => {
 });
 
 // 自定义滚轮缩放逻辑
+// 自定义滚轮缩放逻辑
 const zoomStep = 1.1; // 每次缩放 10%
 renderer.domElement.addEventListener('wheel', (event) => {
     event.preventDefault(); // 阻止默认滚动行为
 
-    // 获取方向，忽略 delta 的大小（解决远程桌面数据乱跳问题）
-    const direction = Math.sign(event.deltaY);
+    // 初始化 target (防止从未初始化)
+    if (!isZoomInit) {
+        targetZoomDist = camera.position.distanceTo(controls.target);
+        isZoomInit = true;
+    }
 
-    // 计算相机到目标的向量
-    const offset = new THREE.Vector3().copy(camera.position).sub(controls.target);
-    let distance = offset.length();
+    const direction = Math.sign(event.deltaY);
 
     if (direction > 0) {
         // 滚轮向下，缩小（拉远）
-        distance *= zoomStep;
+        targetZoomDist *= zoomStep;
     } else {
         // 滚轮向上，放大（拉近）
-        distance /= zoomStep;
+        targetZoomDist /= zoomStep;
     }
 
-    // 限制距离 (参考 OrbitControls 默认 min/max)
-    distance = Math.max(controls.minDistance, Math.min(distance, controls.maxDistance));
+    // 限制距离
+    targetZoomDist = Math.max(controls.minDistance, Math.min(targetZoomDist, controls.maxDistance));
 
-    // 更新相机位置
-    offset.setLength(distance);
-    camera.position.copy(controls.target).add(offset);
-
-    // 手动触发更新，确保平滑
-    // controls.update(); // 动画循环里有调 update，这里其实只需要改位置
+    // 注意：不再这里直接修改 camera.position，交给 animate 做平滑过渡
 }, { passive: false });
 
 // --- 2. 加载各个模块 ---
@@ -172,8 +173,8 @@ function animate() {
         // 如果松手 (惯性阶段)
         if (!isDragging) {
             baguaSystem.rotation.z += baguaVelocity;
-            // 摩擦力衰减 (0.95 -> 几秒内停下)
-            baguaVelocity *= 0.95;
+            // 摩擦力衰减 (0.95 -> 0.99 极低摩擦，滑行很久)
+            baguaVelocity *= 0.96;
 
             // 当速度极小时归零，避免无休止计算
             if (Math.abs(baguaVelocity) < 0.00001) {
@@ -185,6 +186,33 @@ function animate() {
                 baguaSystem.rotation.z += wobble;
             }
         }
+    }
+
+    // --- 滞后缩放 (Elastic Scaling) ---
+    // 目标: Camera Distance 变化时，Bagua Scale 随之变化，但有 5s 延迟
+    // 初始距离 4.5
+    const baseDistance = 4.5;
+    if (typeof window.currentSmoothedScale === 'undefined') window.currentSmoothedScale = 1.0;
+
+    // 计算当前相机距离
+    const currentDist = camera.position.distanceTo(controls.target);
+
+    // Scale Factor Logic: 
+    // Camera is CLOSER (e.g. 2.25) -> We want Bagua to appear LARGER.
+    // Since Bagua is in Camera space, it usually looks same size on screen.
+    // To make it look larger (like world object), we increase scale.
+    // factor = base / current.  4.5 / 2.25 = 2.0. Scale becomes 2.0x. Correct.
+    const targetScaleMultiplier = baseDistance / Math.max(0.1, currentDist);
+
+    // 平滑插值 (Damping)
+    // 5秒延迟. 0.008 per frame (60fps) ~= 5s settle time logic
+    window.currentSmoothedScale += (targetScaleMultiplier - window.currentSmoothedScale) * 0.008;
+
+    if (baguaSystem) {
+        // 读取 bagua.js 中保存的基础 scale (例如 1.5 或 0.8)
+        const baseS = baguaSystem.userData.baseScale || 1.5;
+        const finalS = baseS * window.currentSmoothedScale;
+        baguaSystem.scale.setScalar(finalS);
     }
 
     // 更新陀螺仪视差
@@ -226,6 +254,30 @@ function animate() {
         // 原 CSS 有 text-shadow, 这里保持即可。
     }
 
+    // --- 相机缩放平滑 (Viscosity) ---
+    // 如果 targetZoomDist 已初始化，则进行 Lerp
+    if (isZoomInit || Math.abs(targetZoomDist) > 0.001) {
+        // 初始化检查 (处理第一次运行)
+        if (!isZoomInit && targetZoomDist === 0) {
+            targetZoomDist = camera.position.distanceTo(controls.target);
+            isZoomInit = true;
+        }
+
+        const currentDist = camera.position.distanceTo(controls.target);
+        // 粘滞系数: 0.05 (非常滑/慢) ~ 0.2 (快). 
+        // 用户要求 "微小的拖延的延迟" -> 0.08 左右试试
+        const lerpFactor = 0.08;
+
+        if (Math.abs(currentDist - targetZoomDist) > 0.01) {
+            const newDist = currentDist + (targetZoomDist - currentDist) * lerpFactor;
+
+            // 更新相机位置 (保持方向)
+            const offset = new THREE.Vector3().copy(camera.position).sub(controls.target);
+            offset.setLength(newDist);
+            camera.position.copy(controls.target).add(offset);
+        }
+    }
+
     controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(animate);
@@ -241,4 +293,7 @@ window.addEventListener('resize', () => {
 
     // 窗口大小改变时，也重新评估相机距离（例如手机横竖屏切换）
     updateCameraPosition();
+    // 重置缩放目标，避免跳回旧位置
+    targetZoomDist = camera.position.distanceTo(controls.target);
+    isZoomInit = true;
 });

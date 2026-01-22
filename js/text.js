@@ -20,8 +20,8 @@ export function initText() {
             await new Promise(r => setTimeout(r, 100));
             textElement.classList.add('visible');
 
-            // 3. 停留阅读 (比如 5秒)
-            await new Promise(r => setTimeout(r, 5000));
+            // 3. 停留阅读 (固定 6秒)
+            await new Promise(r => setTimeout(r, 6000));
 
             // 4. 淡出 (移除 class)
             textElement.classList.remove('visible');
