@@ -18,7 +18,8 @@ export function createBagua() {
         transparent: true,
         opacity: 0.1,
         side: THREE.DoubleSide,
-        depthWrite: false // 防止遮挡粒子导致闪烁
+        depthWrite: false, // 防止遮挡粒子导致闪烁
+        fog: false
     });
 
     const baguaData = [

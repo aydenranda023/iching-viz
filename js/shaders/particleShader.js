@@ -8,6 +8,9 @@ export const vertexShader = `
     varying float vNoise; 
     varying float vDepth; 
 
+    #include <common>
+    #include <fog_pars_vertex>
+
     // Simplex Noise
     vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
     vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -80,6 +83,8 @@ export const vertexShader = `
         
         vNoise = noise;
         vDepth = -mvPosition.z; 
+
+        #include <fog_vertex>
     }
 `;
 
@@ -87,6 +92,9 @@ export const fragmentShader = `
     uniform float uTime;
     varying float vNoise;
     varying float vDepth;
+
+    #include <common>
+    #include <fog_pars_fragment>
 
     void main() {
         vec2 center = gl_PointCoord - 0.5;
@@ -112,5 +120,7 @@ export const fragmentShader = `
         float finalAlpha = alphaShape * 0.9; 
         
         gl_FragColor = vec4(finalColor, finalAlpha);
+
+        #include <fog_fragment>
     }
 `;

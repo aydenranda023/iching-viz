@@ -44,13 +44,17 @@ export function createParticles() {
     material = new THREE.ShaderMaterial({
         vertexShader: vertexShader,
         fragmentShader: fragmentShader,
-        uniforms: {
-            uTime: { value: 0 },
-            uMorphFactor: { value: 0.0 }
-        },
+        uniforms: THREE.UniformsUtils.merge([
+            THREE.UniformsLib.fog,
+            {
+                uTime: { value: 0 },
+                uMorphFactor: { value: 0.0 }
+            }
+        ]),
         transparent: true,
         blending: THREE.NormalBlending,
         depthWrite: false,
+        fog: true
     });
 
     const particles = new THREE.Points(geometry, material);

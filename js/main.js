@@ -20,7 +20,7 @@ scene.background = bgColorLight.clone();
 // Fog 也会随背景变色，在 animate 中更新
 // Fog 也会随背景变色，在 animate 中更新
 // 使用 Linear Fog 实现 40-50 距离的渐隐效果
-scene.fog = new THREE.Fog(0xd1d1d1, 40, 50);
+scene.fog = new THREE.Fog(0xd1d1d1, 13, 50);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
 
