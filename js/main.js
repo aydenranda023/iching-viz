@@ -8,6 +8,9 @@ import { initText } from './text.js';
 import { initGyro, updateGyro } from './gyro.js';
 import { loadModelPoints } from './modelLoader.js';
 import { initInteraction, updateInteraction, onResize } from './interaction.js';
+import { initAudio } from './audio.js';
+
+initAudio();
 
 // --- 1. 基础场景设置 (参考 index.html) ---
 const scene = new THREE.Scene();
