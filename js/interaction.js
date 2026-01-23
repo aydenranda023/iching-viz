@@ -62,7 +62,10 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     });
     canvas.addEventListener('mouseup', (e) => {
         if (performance.now() - lastTouchTime < 500) return;
-        onPointerUp(e.clientX, e.clientY);
+        // Only allow Left Click (button 0) to trigger click logic
+        if (e.button === 0) {
+            onPointerUp(e.clientX, e.clientY);
+        }
     });
 
     canvas.addEventListener('touchstart', (e) => {
