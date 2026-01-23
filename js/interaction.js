@@ -18,18 +18,20 @@ let isZoomInit = false;
 // --- References ---
 let _scene, _camera, _renderer, _controls, _baguaSystem;
 let _interactionSphere;
+let _onMorphStart; // Callback for random model selection
 
 // --- Raycaster ---
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
 // --- Initialization ---
-export function initInteraction(scene, camera, renderer, controls, baguaSystem) {
+export function initInteraction(scene, camera, renderer, controls, baguaSystem, onMorphStart) {
     _scene = scene;
     _camera = camera;
     _renderer = renderer;
     _controls = controls;
     _baguaSystem = baguaSystem;
+    _onMorphStart = onMorphStart;
 
     // Create invisible interaction sphere
     const interactionGeometry = new THREE.SphereGeometry(2.5, 32, 32);
@@ -42,7 +44,12 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem) 
 
     // Bind events
     const canvas = _renderer.domElement;
-    canvas.addEventListener('mousedown', (e) => onPointerDown(e.clientX, e.clientY));
+    canvas.addEventListener('mousedown', (e) => {
+        // Only allow Left Click (button 0) for custom interaction
+        if (e.button === 0) {
+            onPointerDown(e.clientX, e.clientY);
+        }
+    });
     canvas.addEventListener('mousemove', (e) => onPointerMove(e.clientX));
     canvas.addEventListener('mouseup', (e) => onPointerUp(e.clientX, e.clientY));
 
@@ -113,6 +120,11 @@ function checkClick(x, y) {
     const intersects = raycaster.intersectObject(_interactionSphere);
 
     if (intersects.length > 0) {
+        // If we are about to morph TO model (currently sphere), trigger callback
+        if (!isMorphing && _onMorphStart) {
+            _onMorphStart();
+        }
+
         isMorphing = !isMorphing;
         console.log("Interaction sphere clicked. Morphing:", isMorphing);
     }
@@ -151,7 +163,7 @@ export function updateInteraction(time) {
     if (_baguaSystem) {
         if (!isDragging) {
             _baguaSystem.rotation.z += baguaVelocity;
-            baguaVelocity *= 0.96;
+            baguaVelocity *= 0.97;
 
             if (Math.abs(baguaVelocity) < 0.00001) {
                 baguaVelocity = 0;

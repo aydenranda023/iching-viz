@@ -1,4 +1,4 @@
-export function initText() {
+export function initText(getColor) {
     const textContent = [
         "知其白，守其黑，为天下式。",
         "想象焦虑是一滴墨入水，被巨大的空白稀释、消解...",
@@ -13,6 +13,11 @@ export function initText() {
 
     async function runTextCycle() {
         while (true) {
+            // 0. 设置颜色 (非黑即白)
+            if (getColor) {
+                textElement.style.color = getColor();
+            }
+
             // 1. 设置内容
             textElement.innerHTML = textContent[textIndex];
 
