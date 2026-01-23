@@ -2,10 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // 导入我们的三个子模块
-import { createParticles, updateParticles } from './particles.js';
+import { createParticles, updateParticles, updateMorphTarget, setMorphFactor } from './particles.js';
 import { createBagua, updateBagua, resizeBagua } from './bagua.js';
 import { initText } from './text.js';
 import { initGyro, updateGyro } from './gyro.js';
+import { loadModelPoints } from './modelLoader.js';
 
 // --- 1. 基础场景设置 (参考 index.html) ---
 const scene = new THREE.Scene();
@@ -53,17 +54,47 @@ let isZoomInit = false;
 
 // --- 自定义交互逻辑 ---
 // 1. 移动端/桌面端 通用拖拽旋转八卦
-// 1. 移动端/桌面端 通用拖拽旋转八卦
 let isDragging = false;
 let previousMsgX = 0;
 let baguaVelocity = 0; // 旋转速度 (惯性)
 let lastPointerTime = 0;
 
-function onPointerDown(x) {
+// Raycaster for particle interaction
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let isMorphing = false; // 目标状态：true = 模型, false = 球体
+let currentMorphFactor = 0.0; // 当前变形进度
+
+// 创建不可见的交互球体
+const interactionGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+const interactionMaterial = new THREE.MeshBasicMaterial({
+    visible: false, // 不可见
+    side: THREE.DoubleSide
+});
+const interactionSphere = new THREE.Mesh(interactionGeometry, interactionMaterial);
+scene.add(interactionSphere);
+
+function onPointerDown(x, y) {
     isDragging = true;
     previousMsgX = x;
     baguaVelocity = 0; // 按下时停止惯性
     lastPointerTime = performance.now();
+
+    // 检测点击粒子
+    // 将鼠标坐标归一化为 -1 到 +1
+    mouse.x = (x / window.innerWidth) * 2 - 1;
+    mouse.y = -(y / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+
+    // 检测与交互球体的相交
+    const intersects = raycaster.intersectObject(interactionSphere);
+
+    if (intersects.length > 0) {
+        // 点击到了中心区域，切换变形状态
+        isMorphing = !isMorphing;
+        console.log("Interaction sphere clicked. Morphing:", isMorphing);
+    }
 }
 
 function onPointerMove(x) {
@@ -87,7 +118,7 @@ function onPointerUp() {
 }
 
 // Mouse Events
-renderer.domElement.addEventListener('mousedown', (e) => onPointerDown(e.clientX));
+renderer.domElement.addEventListener('mousedown', (e) => onPointerDown(e.clientX, e.clientY));
 renderer.domElement.addEventListener('mousemove', (e) => onPointerMove(e.clientX));
 renderer.domElement.addEventListener('mouseup', onPointerUp);
 
@@ -95,7 +126,7 @@ renderer.domElement.addEventListener('mouseup', onPointerUp);
 renderer.domElement.addEventListener('touchstart', (e) => {
     controls.enableZoom = true; // 允许缩放
     if (e.touches.length === 1) {
-        onPointerDown(e.touches[0].clientX);
+        onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
     }
 }, { passive: true });
 
@@ -144,6 +175,21 @@ renderer.domElement.addEventListener('wheel', (event) => {
 const particleSystem = createParticles();
 scene.add(particleSystem);
 
+// 加载模型数据并注入粒子系统
+// 移动端优化：屏幕宽度小于 768px 时，减少粒子数量
+const isMobile = window.innerWidth < 768;
+const particleCount = isMobile ? 150000 : 400000;
+
+loadModelPoints('./model/上古神剑.glb', particleCount)
+    .then(points => {
+        console.log("Model loaded, updating particles...");
+        updateMorphTarget(points);
+    })
+    .catch(err => {
+        console.error("Failed to load model:", err);
+    });
+
+
 // B. 加载八卦背景 (来自 BW.html)
 const baguaSystem = createBagua();
 camera.add(baguaSystem); // <--- 关键：加到相机上！
@@ -164,6 +210,14 @@ function animate() {
     // 更新粒子 Shader 时间
     // 更新粒子 Shader 时间
     updateParticles(time);
+
+    // 处理变形动画
+    const targetFactor = isMorphing ? 1.0 : 0.0;
+    // 平滑插值
+    if (Math.abs(currentMorphFactor - targetFactor) > 0.001) {
+        currentMorphFactor += (targetFactor - currentMorphFactor) * 0.02; // 调整速度
+        setMorphFactor(currentMorphFactor);
+    }
 
     // 更新八卦旋转 (保留自动旋转作为基底，叠加用户旋转?)
     // 之前的 updateBagua 会覆盖 rotation.z。
