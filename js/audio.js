@@ -68,13 +68,19 @@ export function initAudio() {
             const enableAudio = () => {
                 audio.play().then(() => {
                     updateIcon();
+                    console.log("Audio unlocked by user interaction.");
+                }).catch(e => console.error("Unlock failed:", e));
+
+                // Clean up listeners immediately
+                ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach(evt => {
+                    document.removeEventListener(evt, enableAudio, { capture: true });
                 });
-                document.removeEventListener('click', enableAudio);
-                document.removeEventListener('touchstart', enableAudio);
             };
 
-            document.addEventListener('click', enableAudio);
-            document.addEventListener('touchstart', enableAudio);
+            // Use capture: true to intercept events before other handlers
+            ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach(evt => {
+                document.addEventListener(evt, enableAudio, { capture: true, once: true });
+            });
         });
     }
 }

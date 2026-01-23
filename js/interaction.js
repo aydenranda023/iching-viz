@@ -30,6 +30,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     _camera = camera;
     _renderer = renderer;
     _controls = controls;
+    _controls.enableZoom = false; // 禁用原生缩放
     _baguaSystem = baguaSystem;
     _onMorphStart = onMorphStart;
 
@@ -153,7 +154,6 @@ function checkClick(x, y) {
     }
 }
 
-const zoomStep = 1.1;
 let wheelTimeout;
 
 function onWheel(event) {
@@ -164,20 +164,31 @@ function onWheel(event) {
         isZoomInit = true;
     }
 
+    // 1. 数据清洗 (Safe Zoom) - 忽略数值大小，只看方向
     const direction = Math.sign(event.deltaY);
-    if (direction > 0) {
-        targetZoomDist *= zoomStep;
+    if (direction === 0) return;
+
+    // 2. 定步长缩放 (Dolly)
+    const factor = 0.95;
+
+    if (direction < 0) {
+        // 拉近 (Dolly In)
+        // 死锁保护：防止相机与目标点重合
+        if (targetZoomDist < 0.0001) return;
+        targetZoomDist *= factor;
     } else {
-        targetZoomDist /= zoomStep;
+        // 拉远 (Dolly Out)
+        targetZoomDist *= (1 / factor);
     }
 
+    // 限制范围
     targetZoomDist = Math.max(_controls.minDistance, Math.min(targetZoomDist, _controls.maxDistance));
 
     // Log distance when wheel stops
     clearTimeout(wheelTimeout);
     wheelTimeout = setTimeout(() => {
         const dist = _camera.position.distanceTo(_controls.target);
-        console.log("Camera Distance:", dist.toFixed(2));
+        console.log("Safe Zoom Distance:", dist.toFixed(4));
     }, 200);
 }
 
