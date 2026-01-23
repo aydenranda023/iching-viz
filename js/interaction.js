@@ -34,7 +34,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     _onMorphStart = onMorphStart;
 
     // Create invisible interaction sphere
-    const interactionGeometry = new THREE.SphereGeometry(2.5, 32, 32);
+    const interactionGeometry = new THREE.SphereGeometry(3.0, 32, 32);
     const interactionMaterial = new THREE.MeshBasicMaterial({
         visible: false,
         side: THREE.DoubleSide
@@ -44,16 +44,29 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
 
     // Bind events
     const canvas = _renderer.domElement;
+    // --- Double-fire prevention ---
+    let lastTouchTime = 0;
+
     canvas.addEventListener('mousedown', (e) => {
+        // Ignore emulated mouse events (within 500ms of a touch)
+        if (performance.now() - lastTouchTime < 500) return;
+
         // Only allow Left Click (button 0) for custom interaction
         if (e.button === 0) {
             onPointerDown(e.clientX, e.clientY);
         }
     });
-    canvas.addEventListener('mousemove', (e) => onPointerMove(e.clientX));
-    canvas.addEventListener('mouseup', (e) => onPointerUp(e.clientX, e.clientY));
+    canvas.addEventListener('mousemove', (e) => {
+        if (performance.now() - lastTouchTime < 500) return;
+        onPointerMove(e.clientX);
+    });
+    canvas.addEventListener('mouseup', (e) => {
+        if (performance.now() - lastTouchTime < 500) return;
+        onPointerUp(e.clientX, e.clientY);
+    });
 
     canvas.addEventListener('touchstart', (e) => {
+        lastTouchTime = performance.now();
         _controls.enableZoom = true;
         if (e.touches.length === 1) {
             onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
@@ -61,12 +74,18 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     }, { passive: true });
 
     canvas.addEventListener('touchmove', (e) => {
+        lastTouchTime = performance.now();
         if (e.touches.length === 1) {
             onPointerMove(e.touches[0].clientX);
         }
     }, { passive: true });
 
     canvas.addEventListener('touchend', (e) => {
+        lastTouchTime = performance.now();
+        // Prevent default to stop mouse emulation (click/mousedown/mouseup)
+        // Note: This might block some default browser behaviors, but for this canvas app it's usually desired.
+        if (e.cancelable) e.preventDefault();
+
         if (e.changedTouches.length > 0) {
             onPointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
         } else {
