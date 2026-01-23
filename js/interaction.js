@@ -107,7 +107,7 @@ function onPointerUp(x, y) {
     const dy = y - clickStartY;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < 30) {
+    if (distance < 60) {
         checkClick(x, y);
     }
 }
@@ -120,8 +120,9 @@ function checkClick(x, y) {
     const intersects = raycaster.intersectObject(_interactionSphere);
 
     if (intersects.length > 0) {
-        // If we are about to morph TO model (currently sphere), trigger callback
-        if (!isMorphing && _onMorphStart) {
+        // Only switch model if we are currently near the "sphere" state (factor < 0.1)
+        // If we are already morphing or fully morphed, just reverse direction.
+        if (!isMorphing && currentMorphFactor < 0.1 && _onMorphStart) {
             _onMorphStart();
         }
 
