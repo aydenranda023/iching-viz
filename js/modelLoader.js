@@ -114,7 +114,7 @@ export function loadModelPoints(url, count) {
             const maxDim = Math.max(sizeX, sizeY, sizeZ);
 
             // 目标半径 (八卦盘内部)
-            const targetRadius = 2.0;
+            const targetRadius = 1.5;
             // 缩放比例
             const scale = (targetRadius * 2) / maxDim;
 
