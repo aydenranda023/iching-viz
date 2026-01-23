@@ -15,7 +15,9 @@ const bgColorLight = new THREE.Color(0xd1d1d1); // 浅灰 (黑粒子背景)
 const bgColorDark = new THREE.Color(0x777777);  // 中灰 (白粒子背景)
 scene.background = bgColorLight.clone();
 // Fog 也会随背景变色，在 animate 中更新
-scene.fog = new THREE.FogExp2(0xd1d1d1, 0.01);
+// Fog 也会随背景变色，在 animate 中更新
+// 使用 Linear Fog 实现 40-50 距离的渐隐效果
+scene.fog = new THREE.Fog(0xd1d1d1, 40, 50);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
 
@@ -51,6 +53,10 @@ controls.autoRotateSpeed = 0.15;
 controls.enablePan = false;
 controls.enableRotate = true; // 开启旋转
 controls.enableZoom = true;   // 开启缩放
+
+// 设置相机距离限制
+controls.minDistance = 0.1;
+controls.maxDistance = 50;
 
 // 鼠标按键映射
 controls.mouseButtons = {

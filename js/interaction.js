@@ -131,6 +131,8 @@ function checkClick(x, y) {
 }
 
 const zoomStep = 1.1;
+let wheelTimeout;
+
 function onWheel(event) {
     event.preventDefault();
 
@@ -147,6 +149,13 @@ function onWheel(event) {
     }
 
     targetZoomDist = Math.max(_controls.minDistance, Math.min(targetZoomDist, _controls.maxDistance));
+
+    // Log distance when wheel stops
+    clearTimeout(wheelTimeout);
+    wheelTimeout = setTimeout(() => {
+        const dist = _camera.position.distanceTo(_controls.target);
+        console.log("Camera Distance:", dist.toFixed(2));
+    }, 200);
 }
 
 // --- Update Loop ---
