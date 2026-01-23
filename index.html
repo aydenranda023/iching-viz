@@ -58,6 +58,29 @@
         }
 
         /* @keyframes fadeCycle removed as we control it via JS now */
+        /* @keyframes fadeCycle removed as we control it via JS now */
+
+        #audio-control {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 32px;
+            height: 32px;
+            z-index: 100;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+
+        #audio-control:hover {
+            opacity: 1;
+        }
+
+        #audio-control img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
     </style>
 </head>
 
@@ -67,6 +90,12 @@
             初始化模块...
         </div>
     </div>
+
+    <div id="audio-control">
+        <img id="audio-icon" src="./icon/Volume-2_Mute.png" alt="Audio Toggle">
+    </div>
+
+    <audio id="bgm" src="./music/BGM.mp3" loop preload="auto"></audio>
 
     <script type="importmap">
         {
