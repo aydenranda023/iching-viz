@@ -29,7 +29,7 @@ function updateCameraPosition() {
     const aspect = window.innerWidth / window.innerHeight;
     // 如果是竖屏（手机），拉远相机以完整显示内容
     const baseDistance = 4.5;
-    camera.position.z = aspect < 1 ? baseDistance * 1.8 : baseDistance;
+    camera.position.z = aspect < 1 ? baseDistance * 2 : baseDistance;
 
     // 同时调整八卦图的大小
     resizeBagua(aspect);
