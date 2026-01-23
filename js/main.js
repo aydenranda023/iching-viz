@@ -58,6 +58,8 @@ let isDragging = false;
 let previousMsgX = 0;
 let baguaVelocity = 0; // 旋转速度 (惯性)
 let lastPointerTime = 0;
+let clickStartX = 0;
+let clickStartY = 0;
 
 // Raycaster for particle interaction
 const raycaster = new THREE.Raycaster();
@@ -80,6 +82,12 @@ function onPointerDown(x, y) {
     baguaVelocity = 0; // 按下时停止惯性
     lastPointerTime = performance.now();
 
+    // 记录点击起始位置
+    clickStartX = x;
+    clickStartY = y;
+}
+
+function checkClick(x, y) {
     // 检测点击粒子
     // 将鼠标坐标归一化为 -1 到 +1
     mouse.x = (x / window.innerWidth) * 2 - 1;
@@ -113,14 +121,22 @@ function onPointerMove(x) {
     }
 }
 
-function onPointerUp() {
+function onPointerUp(x, y) {
     isDragging = false;
+
+    // 计算移动距离
+    const dist = Math.sqrt(Math.pow(x - clickStartX, 2) + Math.pow(y - clickStartY, 2));
+
+    // 如果移动距离很小（小于 5 像素），则视为点击
+    if (dist < 5) {
+        checkClick(x, y);
+    }
 }
 
 // Mouse Events
 renderer.domElement.addEventListener('mousedown', (e) => onPointerDown(e.clientX, e.clientY));
 renderer.domElement.addEventListener('mousemove', (e) => onPointerMove(e.clientX));
-renderer.domElement.addEventListener('mouseup', onPointerUp);
+renderer.domElement.addEventListener('mouseup', (e) => onPointerUp(e.clientX, e.clientY));
 
 // Touch Events
 renderer.domElement.addEventListener('touchstart', (e) => {
@@ -136,9 +152,13 @@ renderer.domElement.addEventListener('touchmove', (e) => {
     }
 }, { passive: true });
 
-renderer.domElement.addEventListener('touchend', () => {
-    onPointerUp();
-    // 只有在没有手指时才需要考虑 status, 这里 OrbitControls 自己会处理 zoom 结束
+renderer.domElement.addEventListener('touchend', (e) => {
+    if (e.changedTouches.length > 0) {
+        onPointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    } else {
+        // Fallback just in case
+        isDragging = false;
+    }
 });
 
 // 自定义滚轮缩放逻辑
