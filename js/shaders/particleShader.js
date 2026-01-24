@@ -79,7 +79,7 @@ export const vertexShader = `
         gl_Position = projectionMatrix * mvPosition;
 
         // 增大粒子尺寸，让它们重叠形成柔和感
-        gl_PointSize = (5.0) * (1.0 / -mvPosition.z);
+        gl_PointSize = (3.5) * (1.0 / -mvPosition.z);
         
         vNoise = noise;
         vDepth = -mvPosition.z; 
@@ -119,7 +119,7 @@ export const fragmentShader = `
         vec3 finalColor = mix(c_black, c_white, mixVal);
 
         // 降低整体透明度，让粒子堆积出体积感而不这遮挡太快
-        float finalAlpha = alphaShape * 0.6; 
+        float finalAlpha = alphaShape * 0.4; 
         
         gl_FragColor = vec4(finalColor, finalAlpha);
 
