@@ -78,8 +78,8 @@ export const vertexShader = `
         vec4 mvPosition = modelViewMatrix * vec4(finalPos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
 
-        // 稍微调大粒子 (index.html 参数)
-        gl_PointSize = (2.0) * (1.0 / -mvPosition.z);
+        // 增大粒子尺寸，让它们重叠形成柔和感
+        gl_PointSize = (5.0) * (1.0 / -mvPosition.z);
         
         vNoise = noise;
         vDepth = -mvPosition.z; 
@@ -99,10 +99,12 @@ export const fragmentShader = `
     void main() {
         vec2 center = gl_PointCoord - 0.5;
         float dist = length(center);
-        float alphaShape = 1.0 - smoothstep(0.0, 0.5, dist);
-        alphaShape = pow(alphaShape, 2.0); 
         
-        if (alphaShape < 0.05) discard;
+        // 更加柔和的圆形 alpha (无硬边)
+        float alphaShape = smoothstep(0.5, 0.0, dist);
+        
+        // 移除 discard，避免边缘锯齿
+        // if (alphaShape < 0.05) discard; 
 
         // === index.html 的黑白配色 ===
         vec3 c_white = vec3(1.0, 1.0, 1.0); 
@@ -111,13 +113,13 @@ export const fragmentShader = `
         float n = vNoise * 0.5 + 0.5; 
         float slowCycle = sin(uTime * 0.15) * 0.5 + 0.5;
         
-        // 混合阈值
-        float mixVal = smoothstep(slowCycle - 0.25, slowCycle + 0.25, n);
+        // 增大混合过渡区，使得颜色变化不那么剧烈
+        float mixVal = smoothstep(slowCycle - 0.4, slowCycle + 0.4, n);
         
         vec3 finalColor = mix(c_black, c_white, mixVal);
 
-        // 透明度控制
-        float finalAlpha = alphaShape * 0.9; 
+        // 降低整体透明度，让粒子堆积出体积感而不这遮挡太快
+        float finalAlpha = alphaShape * 0.6; 
         
         gl_FragColor = vec4(finalColor, finalAlpha);
 
