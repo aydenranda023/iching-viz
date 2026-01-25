@@ -8,6 +8,7 @@ let baguaVelocity = 0;
 let lastPointerTime = 0;
 let clickStartX = 0;
 let clickStartY = 0;
+let isMultiTouch = false;
 
 let isMorphing = false;
 let currentMorphFactor = 0.0;
@@ -54,6 +55,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
 
         // Only allow Left Click (button 0) for custom interaction
         if (e.button === 0) {
+            isMultiTouch = false; // Mouse is always single touch
             onPointerDown(e.clientX, e.clientY);
         }
     });
@@ -72,6 +74,16 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     canvas.addEventListener('touchstart', (e) => {
         lastTouchTime = performance.now();
         _controls.enableZoom = true;
+
+        // Reset if this is the start of a single touch
+        if (e.touches.length === 1) {
+            isMultiTouch = false;
+        }
+        // Flag as multi-touch if more than one finger
+        if (e.touches.length > 1) {
+            isMultiTouch = true;
+        }
+
         if (e.touches.length === 1) {
             onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
         }
@@ -125,6 +137,8 @@ function onPointerMove(x) {
 }
 
 function onPointerUp(x, y) {
+    if (isMultiTouch) return; // Ignore click if it was a multi-touch gesture
+
     isDragging = false;
     const dx = x - clickStartX;
     const dy = y - clickStartY;

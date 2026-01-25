@@ -119,7 +119,7 @@ export const fragmentShader = `
         vec3 finalColor = mix(c_black, c_white, mixVal);
 
         // 降低整体透明度，让粒子堆积出体积感而不这遮挡太快
-        float finalAlpha = alphaShape * 0.4; 
+        float finalAlpha = alphaShape * 0.5; 
         
         gl_FragColor = vec4(finalColor, finalAlpha);
 
