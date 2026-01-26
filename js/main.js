@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 // 导入我们的三个子模块
 import { createParticles, updateParticles, updateMorphTarget } from './particles.js';
-import { createBagua, resizeBagua } from './bagua.js';
+import { createBagua, resizeBagua, updateBagua } from './bagua.js';
 import { initText } from './text.js';
 import { initGyro, updateGyro } from './gyro.js';
 import { loadModelPoints } from './modelLoader.js';
@@ -163,6 +163,9 @@ function animate() {
     // 更新交互逻辑 (变形、旋转、缩放)
     updateInteraction(time);
     updateElasticInteraction();
+
+    // 更新八卦盘动画 (NEW)
+    updateBagua(time);
 
     // 更新陀螺仪视差
     updateGyro();

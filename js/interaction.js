@@ -4,6 +4,7 @@ import { setMorphFactor } from './particles.js';
 // --- State Variables ---
 let isDragging = false;
 let previousMsgX = 0;
+let previousMsgY = 0;
 let baguaVelocity = 0;
 let lastPointerTime = 0;
 let clickStartX = 0;
@@ -61,7 +62,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     });
     canvas.addEventListener('mousemove', (e) => {
         if (performance.now() - lastTouchTime < 500) return;
-        onPointerMove(e.clientX);
+        onPointerMove(e.clientX, e.clientY);
     });
     canvas.addEventListener('mouseup', (e) => {
         if (performance.now() - lastTouchTime < 500) return;
@@ -98,7 +99,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
         if (isMultiTouch || performance.now() < multiTouchCooldown) return;
 
         if (e.touches.length === 1) {
-            onPointerMove(e.touches[0].clientX);
+            onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
         }
     }, { passive: true });
 
@@ -141,19 +142,48 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
 function onPointerDown(x, y) {
     isDragging = true;
     previousMsgX = x;
+    previousMsgY = y;
     baguaVelocity = 0;
     lastPointerTime = performance.now();
     clickStartX = x;
     clickStartY = y;
 }
 
-function onPointerMove(x) {
+function onPointerMove(x, y) {
     if (!isDragging) return;
-    const deltaX = x - previousMsgX;
+
+    // Calculate center of screen
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+
+    // Vector from center to current mouse position
+    const rx = x - cx;
+    const ry = y - cy;
+
+    const dx = x - previousMsgX;
+    const dy = y - previousMsgY;
+
     previousMsgX = x;
+    previousMsgY = y;
+
+    // Normalize radius vector to avoid extreme speeds near center/far edge
+    const rMag = Math.sqrt(rx * rx + ry * ry);
+    if (rMag < 10) return; // Too close to center, ignore
+
+    // Tangent direction: (-ry, rx)
+    // Dot product: dx * (-ry) + dy * (rx)
+    // Cross(R, D) = rx * dy - ry * dx.
+    const crossProduct = (rx * dy) - (ry * dx);
+
+    // dTheta = (Component along tangent) / radius.
+    const dTheta = crossProduct / (rMag * rMag);
 
     if (_baguaSystem) {
-        const rotateDelta = deltaX * 0.012;
+        // Apply a sensitivity factor
+        // Inverted to match user expectation (tangent push)
+        const sensitivity = -1.5;
+        const rotateDelta = dTheta * sensitivity;
+
         _baguaSystem.rotation.z += rotateDelta;
         baguaVelocity = rotateDelta;
     }
@@ -163,9 +193,9 @@ function onPointerUp(x, y) {
     if (isMultiTouch) return; // Ignore click if it was a multi-touch gesture
 
     isDragging = false;
-    const dx = x - clickStartX;
-    const dy = y - clickStartY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    const clickDx = x - clickStartX;
+    const clickDy = y - clickStartY;
+    const distance = Math.sqrt(clickDx * clickDx + clickDy * clickDy);
 
     // Threshold for click vs drag (10px is standard for mobile tap)
     if (distance < 10) {
