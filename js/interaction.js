@@ -144,7 +144,8 @@ function onPointerUp(x, y) {
     const dy = y - clickStartY;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    if (distance < 60) {
+    // Threshold for click vs drag (10px is standard for mobile tap)
+    if (distance < 10) {
         checkClick(x, y);
     }
 }
