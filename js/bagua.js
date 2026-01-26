@@ -7,11 +7,9 @@ export function createBagua() {
     baguaGroup = new THREE.Group();
     rings = [];
 
-    // 位置与缩放
     baguaGroup.position.z = -20;
     baguaGroup.scale.set(1.5, 1.5, 1.5);
 
-    // 基础材质模板 (不再直接使用，而是克隆)
     const baseMaterial = new THREE.MeshBasicMaterial({
         color: 0x666666,
         transparent: true,
@@ -26,7 +24,6 @@ export function createBagua() {
         [1, 1, 0], [0, 1, 0], [1, 0, 0], [0, 0, 0]
     ];
 
-    // --- 几何构建辅助函数 (保持极速版逻辑) ---
     function pushRect(vertices, x, y, w, h, rotation, offsetX, offsetY) {
         const halfW = w / 2;
         const halfH = h / 2;
@@ -57,7 +54,6 @@ export function createBagua() {
         vertices.push(corners[1].finalX, corners[1].finalY, 0);
     }
 
-    // --- 生成 9 圈 ---
     const totalRings = 9;
     const baseRadius = 5.0;
     const ringSpacing = 1.8;
@@ -103,36 +99,22 @@ export function createBagua() {
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
 
-        // 克隆材质以独立控制透明度
         const material = baseMaterial.clone();
 
-        // 计算最大透明度：越往外越透明
-        // Layer 0: 0.4
-        // Layer 8: 0.1
-        const maxOpacity = Math.max(0.1, 0.4 - (layer * 0.035));
+        const maxOpacity = Math.max(0.08, 0.5 - (layer * 0.08));
 
-        // 初始状态：Layer 0 可见，其他隐藏
         material.opacity = isBaseLayer ? maxOpacity : 0;
 
         const ringMesh = new THREE.Mesh(geometry, material);
 
-        // --- 核心动力学参数配置 ---
         rings.push({
             mesh: ringMesh,
             material: material,
             layer: layer,
             maxOpacity: maxOpacity,
-
-            // 虚拟旋转角度
             virtualRotation: 0,
-            lastVirtualRotation: 0, // 用于计算速度
-
-            // 1. 惯性/延迟系数 (Lag Factor)
-            // 极大的启动延迟：内圈较快，外圈极慢
-            // 使用指数衰减
+            lastVirtualRotation: 0,
             lerpFactor: Math.max(0.0005, 0.05 * Math.pow(0.6, layer)),
-
-            // 2. 呼吸相位
             breathePhase: Math.random() * Math.PI * 2
         });
 
@@ -145,28 +127,21 @@ export function createBagua() {
 export function updateBagua(time) {
     if (!baguaGroup || rings.length === 0) return;
 
-    // 获取父容器（整体）的旋转角度
     const parentRotation = baguaGroup.rotation.z;
 
-    // 阈值：判断是否在转动
     const ROTATION_THRESHOLD = 0.01;
     let anyRingMoving = false;
 
-    // 链式反应
     for (let i = 0; i < rings.length; i++) {
         const ring = rings[i];
         let targetRotation;
 
         if (i === 0) {
-            // Ring 0 (最内圈) 跟随鼠标
             targetRotation = parentRotation;
         } else {
-            // 后续每一圈的目标是上一圈的"当前状态"的反向
             const prevRing = rings[i - 1];
             targetRotation = -prevRing.virtualRotation;
 
-            // --- 显隐逻辑 ---
-            // 如果上一层正在转动（速度 > 阈值），则本层开始显现
             const prevSpeed = Math.abs(prevRing.virtualRotation - prevRing.lastVirtualRotation);
 
             if (prevSpeed > ROTATION_THRESHOLD) {
@@ -174,30 +149,23 @@ export function updateBagua(time) {
             }
         }
 
-        // 记录上一帧角度
         ring.lastVirtualRotation = ring.virtualRotation;
 
-        // 核心：使用 lerp 逼近目标
         const diff = targetRotation - ring.virtualRotation;
         ring.virtualRotation += diff * ring.lerpFactor;
 
-        // 计算当前速度
         const currentSpeed = Math.abs(ring.virtualRotation - ring.lastVirtualRotation);
         if (currentSpeed > ROTATION_THRESHOLD) {
             anyRingMoving = true;
         }
 
-        // --- 抵消父级旋转 ---
         ring.mesh.rotation.z = ring.virtualRotation - parentRotation;
 
-        // --- 极微弱的呼吸 ---
         const breathe = Math.sin(time * 0.5 + ring.breathePhase) * 0.002;
         ring.mesh.rotation.z += breathe;
     }
 
-    // --- 统一处理透明度 ---
     if (!anyRingMoving) {
-        // 全局静止，重置触发器
         for (let i = 1; i < rings.length; i++) {
             rings[i].shouldFadeIn = false;
         }
@@ -210,7 +178,6 @@ export function updateBagua(time) {
         if (i === 0) {
             targetOpacity = ring.maxOpacity;
         } else {
-            // 只要还在转（anyRingMoving），就应该保持可见（如果已经被触发）
             if (ring.shouldFadeIn) {
                 targetOpacity = ring.maxOpacity;
             } else {
@@ -218,14 +185,12 @@ export function updateBagua(time) {
             }
         }
 
-        // 平滑过渡透明度
         if (Math.abs(ring.material.opacity - targetOpacity) > 0.001) {
             ring.material.opacity += (targetOpacity - ring.material.opacity) * 0.05;
         } else {
             ring.material.opacity = targetOpacity;
         }
 
-        // 优化：不可见时关闭 visible 属性
         ring.mesh.visible = ring.material.opacity > 0.01;
     }
 }
