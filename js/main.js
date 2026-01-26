@@ -14,7 +14,7 @@ initAudio();
 
 // --- 1. 基础场景设置 (参考 index.html) ---
 const scene = new THREE.Scene();
-const bgColorLight = new THREE.Color(0xd1d1d1); // 浅灰 (黑粒子背景)
+const bgColorLight = new THREE.Color(0x121212); // 浅灰 (黑粒子背景)
 const bgColorDark = new THREE.Color(0x777777);  // 中灰 (白粒子背景)
 scene.background = bgColorLight.clone();
 // Fog 也会随背景变色，在 animate 中更新
@@ -46,7 +46,7 @@ document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.dampingFactor = 0.05; // 增加惯性阻尼
+controls.dampingFactor = 0.025; // 增加惯性阻尼 (数值越小，惯性越大)
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.15;
 

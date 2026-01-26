@@ -71,26 +71,32 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
         }
     });
 
+    // --- Multi-touch Cooldown ---
+    let multiTouchCooldown = 0;
+
     canvas.addEventListener('touchstart', (e) => {
         lastTouchTime = performance.now();
         _controls.enableZoom = true;
 
-        // Reset if this is the start of a single touch
-        if (e.touches.length === 1) {
-            isMultiTouch = false;
-        }
-        // Flag as multi-touch if more than one finger
         if (e.touches.length > 1) {
             isMultiTouch = true;
+            isDragging = false; // Cancel any single-finger drag
         }
 
         if (e.touches.length === 1) {
-            onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+            // Only start drag if not in cooldown
+            if (performance.now() > multiTouchCooldown) {
+                isMultiTouch = false;
+                onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
+            }
         }
     }, { passive: true });
 
     canvas.addEventListener('touchmove', (e) => {
         lastTouchTime = performance.now();
+
+        if (isMultiTouch || performance.now() < multiTouchCooldown) return;
+
         if (e.touches.length === 1) {
             onPointerMove(e.touches[0].clientX);
         }
@@ -98,9 +104,26 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
 
     canvas.addEventListener('touchend', (e) => {
         lastTouchTime = performance.now();
-        // Prevent default to stop mouse emulation (click/mousedown/mouseup)
-        // Note: This might block some default browser behaviors, but for this canvas app it's usually desired.
         if (e.cancelable) e.preventDefault();
+
+        // If we were multi-touching, or still have fingers, set cooldown
+        if (isMultiTouch || e.touches.length > 0) {
+            // If we are ending a multi-touch (going from 2+ to <2), trigger cooldown
+            // Actually, just always set cooldown if we were in multi-touch mode recently
+            if (isMultiTouch) {
+                multiTouchCooldown = performance.now() + 300; // 300ms cooldown
+            }
+        }
+
+        // Reset multi-touch flag if no fingers left
+        if (e.touches.length === 0) {
+            isMultiTouch = false;
+        }
+
+        if (performance.now() < multiTouchCooldown) {
+            isDragging = false;
+            return;
+        }
 
         if (e.changedTouches.length > 0) {
             onPointerUp(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
