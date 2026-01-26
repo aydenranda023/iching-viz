@@ -101,7 +101,7 @@ export function createBagua() {
 
         const material = baseMaterial.clone();
 
-        const maxOpacity = Math.max(0.03, 0.6 - (layer * 0.07));
+        const maxOpacity = Math.max(0.04, 0.6 - (layer * 0.05));
 
         material.opacity = isBaseLayer ? maxOpacity : 0;
 

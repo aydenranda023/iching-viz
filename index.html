@@ -81,6 +81,116 @@
             height: 100%;
             display: block;
         }
+
+        /* --- 新增输入框样式 --- */
+        #input-ui-container {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%) scale(1);
+            opacity: 0;
+            transition: opacity 1s ease-in-out, transform 0.1s linear;
+            pointer-events: none;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        #input-ui-container.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .input-box {
+            box-sizing: border-box;
+            width: 40px;
+            /* 初始宽度很小，由 JS 动态调整 */
+            min-width: 40px;
+            max-width: 66.6vw;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 25px;
+            color: #333;
+            font-family: inherit;
+            font-size: 16px;
+            line-height: 1.5;
+            /* 重要：用于计算高度 */
+            outline: none;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: background 0.3s, opacity 1s ease-in-out;
+            resize: none;
+            /* 禁止用户手动调整大小 */
+            overflow-y: scroll;
+            /* 保持滚动开启，但隐藏滚动条 */
+            scrollbar-width: none;
+            /* Firefox */
+            -ms-overflow-style: none;
+            /* IE/Edge */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: block;
+        }
+
+        .input-box::-webkit-scrollbar {
+            display: none;
+            /* Chrome/Safari */
+        }
+
+        .input-box:focus {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .input-box::placeholder {
+            color: rgba(0, 0, 0, 0.4);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: inline-block;
+            transition: width 0.3s, height 0.3s;
+        }
+
+        /* 悬浮滑块 */
+        #custom-scrollbar {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: calc(100% - 30px);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 21;
+        }
+
+        #custom-scrollbar-thumb {
+            position: absolute;
+            width: 100%;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+            top: 0;
+            transition: top 0.1s linear, height 0.3s;
+        }
+
+        /* 隐藏的测量元素 */
+        #input-measure {
+            position: absolute;
+            visibility: hidden;
+            height: auto;
+            width: auto;
+            white-space: pre;
+            font-family: "SF Pro Display", sans-serif;
+            font-size: 16px;
+            padding: 0 20px;
+            /* 与 input-box 保持一致（虽然 padding 在 textarea 上有点复杂，这里主要测量纯文本） */
+        }
     </style>
 </head>
 
@@ -89,6 +199,18 @@
         <div class="guide-text" id="dynamic-text">
             初始化模块...
         </div>
+    </div>
+
+    <!-- 新增输入框容器 -->
+    <div id="input-ui-container">
+        <div class="input-wrapper">
+            <textarea class="input-box" placeholder="输入您的念头..." rows="1"></textarea>
+            <!-- 自定义滚动条 -->
+            <div id="custom-scrollbar">
+                <div id="custom-scrollbar-thumb"></div>
+            </div>
+        </div>
+        <span id="input-measure"></span>
     </div>
 
     <!-- <div id="audio-control">

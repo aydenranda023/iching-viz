@@ -10,6 +10,7 @@ import { loadModelPoints } from './modelLoader.js';
 import { initInteraction, updateInteraction, onResize } from './interaction.js';
 import { initElasticInteraction, updateElasticInteraction } from './elastic_interaction.js';
 import { initAudio } from './audio.js';
+import { initInputUI, updateInputUI } from './inputUI.js';
 
 initAudio();
 
@@ -154,6 +155,9 @@ initInteraction(scene, camera, renderer, controls, baguaSystem, () => {
 // F. 初始化弹性交互 (NEW)
 initElasticInteraction(scene, camera, renderer, controls, particleSystem);
 
+// G. 初始化输入框 UI (NEW)
+initInputUI();
+
 function animate() {
     const time = clock.getElapsedTime();
 
@@ -169,6 +173,10 @@ function animate() {
 
     // 更新陀螺仪视差
     updateGyro();
+
+    // 更新输入框 UI (NEW)
+    const cameraDist = camera.position.distanceTo(controls.target);
+    updateInputUI(cameraDist);
 
     // --- 背景色呼吸逻辑 ---
     const slowCycle = Math.sin(time * 0.15) * 0.5 + 0.5;
