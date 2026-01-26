@@ -68,7 +68,7 @@ export function createBagua() {
         const isBaseLayer = (layer === 0);
         const radius = baseRadius + (layer * ringSpacing);
         const count = 8 * Math.pow(2, layer);
-        const scale = Math.max(0.15, 1.0 / (layer * 0.6 + 1));
+        const scale = Math.max(0.02, 1.0 / (layer * 1 + 1.2));
 
         const lineWidth = 1.2 * scale;
         const lineHeight = 0.15 * scale;
