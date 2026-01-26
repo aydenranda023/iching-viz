@@ -15,7 +15,7 @@ export function initAudio() {
         return;
     }
 
-    audio.volume = 0.5;
+    audio.volume = 0.4;
     // Ensure we start unmuted
     audio.muted = false;
 
@@ -108,11 +108,11 @@ export function playRotatingSound() {
     }
 
     if (rotatingAudioInstance.paused) {
-        rotatingAudioInstance.volume = 0.8;
+        rotatingAudioInstance.volume = 1.0;
         rotatingAudioInstance.play().catch(e => console.log("Rotating sound play failed (likely interaction required):", e));
     } else {
         // If already playing, ensure volume is up
-        rotatingAudioInstance.volume = 0.8;
+        rotatingAudioInstance.volume = 1.0;
     }
 }
 
