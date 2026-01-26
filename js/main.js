@@ -8,16 +8,16 @@ import { initText } from './text.js';
 import { initGyro, updateGyro } from './gyro.js';
 import { loadModelPoints } from './modelLoader.js';
 import { initInteraction, updateInteraction, onResize } from './interaction.js';
+import { initElasticInteraction, updateElasticInteraction } from './elastic_interaction.js';
 import { initAudio } from './audio.js';
 
 initAudio();
 
 // --- 1. 基础场景设置 (参考 index.html) ---
 const scene = new THREE.Scene();
-const bgColorLight = new THREE.Color(0xF7F7F7); // 浅灰 (黑粒子背景)
+const bgColorLight = new THREE.Color(0xD1D1D1); // 浅灰 (黑粒子背景)
 const bgColorDark = new THREE.Color(0x777777);  // 中灰 (白粒子背景)
 scene.background = bgColorLight.clone();
-// Fog 也会随背景变色，在 animate 中更新
 // Fog 也会随背景变色，在 animate 中更新
 // 使用 Linear Fog 实现 40-50 距离的渐隐效果
 scene.fog = new THREE.Fog(0xd1d1d1, 13, 50);
@@ -151,6 +151,9 @@ initInteraction(scene, camera, renderer, controls, baguaSystem, () => {
     }
 });
 
+// F. 初始化弹性交互 (NEW)
+initElasticInteraction(scene, camera, renderer, controls, particleSystem);
+
 function animate() {
     const time = clock.getElapsedTime();
 
@@ -159,6 +162,7 @@ function animate() {
 
     // 更新交互逻辑 (变形、旋转、缩放)
     updateInteraction(time);
+    updateElasticInteraction();
 
     // 更新陀螺仪视差
     updateGyro();

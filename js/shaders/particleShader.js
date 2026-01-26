@@ -2,6 +2,16 @@ export const vertexShader = `
     uniform float uTime;
     uniform float uMorphFactor; // 0.0 = Sphere, 1.0 = Target Model
     
+    // --- Elastic Interaction Uniforms (Slot 1) ---
+    uniform vec3 uDragCenter;
+    uniform vec3 uDragOffset;
+    uniform float uDragRadius;
+
+    // --- Elastic Interaction Uniforms (Slot 2 - Background Decay) ---
+    uniform vec3 uDragCenter2;
+    uniform vec3 uDragOffset2;
+    uniform float uDragRadius2;
+    
     attribute float aRandom;
     attribute vec3 aTarget;
     
@@ -75,11 +85,25 @@ export const vertexShader = `
         // 在模型状态下，我们可能不希望沿着法线膨胀太多，保持形状
         vec3 finalPos = mixedPos + direction * displacement;
 
+        // --- Elastic Interaction Logic (Slot 1) ---
+        float distToDrag = distance(finalPos, uDragCenter);
+        if (distToDrag < uDragRadius) {
+            float influence = smoothstep(uDragRadius, 0.0, distToDrag);
+            finalPos += uDragOffset * influence;
+        }
+
+        // --- Elastic Interaction Logic (Slot 2) ---
+        float distToDrag2 = distance(finalPos, uDragCenter2);
+        if (distToDrag2 < uDragRadius2) {
+            float influence2 = smoothstep(uDragRadius2, 0.0, distToDrag2);
+            finalPos += uDragOffset2 * influence2;
+        }
+
         vec4 mvPosition = modelViewMatrix * vec4(finalPos, 1.0);
         gl_Position = projectionMatrix * mvPosition;
 
         // 增大粒子尺寸，让它们重叠形成柔和感
-        gl_PointSize = (3.5) * (1.0 / -mvPosition.z);
+        gl_PointSize = (2.5) * (1.0 / -mvPosition.z);
         
         vNoise = noise;
         vDepth = -mvPosition.z; 

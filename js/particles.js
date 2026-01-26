@@ -48,7 +48,13 @@ export function createParticles() {
             THREE.UniformsLib.fog,
             {
                 uTime: { value: 0 },
-                uMorphFactor: { value: 0.0 }
+                uMorphFactor: { value: 0.0 },
+                uDragCenter: { value: new THREE.Vector3(0, 0, 0) },
+                uDragOffset: { value: new THREE.Vector3(0, 0, 0) },
+                uDragRadius: { value: 2.0 },
+                uDragCenter2: { value: new THREE.Vector3(0, 0, 0) },
+                uDragOffset2: { value: new THREE.Vector3(0, 0, 0) },
+                uDragRadius2: { value: 2.0 }
             }
         ]),
         transparent: true,
