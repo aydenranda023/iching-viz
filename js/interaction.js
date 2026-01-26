@@ -10,6 +10,7 @@ let lastPointerTime = 0;
 let clickStartX = 0;
 let clickStartY = 0;
 let isMultiTouch = false;
+import { playRotatingSound, stopRotatingSound } from './audio.js';
 
 let isMorphing = false;
 let currentMorphFactor = 0.0;
@@ -186,6 +187,11 @@ function onPointerMove(x, y) {
 
         _baguaSystem.rotation.z += rotateDelta;
         baguaVelocity = rotateDelta;
+
+        // Play sound when dragging
+        if (Math.abs(rotateDelta) > 0.0001) {
+            playRotatingSound();
+        }
     }
 }
 
@@ -280,6 +286,16 @@ export function updateInteraction(time) {
                 baguaVelocity = 0;
                 const wobble = Math.sin(time * 0.5) * 0.001;
                 _baguaSystem.rotation.z += wobble;
+
+                // Stop sound when stopped
+                stopRotatingSound();
+            } else {
+                // Keep playing if still has significant velocity
+                if (Math.abs(baguaVelocity) > 0.001) {
+                    playRotatingSound();
+                } else {
+                    stopRotatingSound();
+                }
             }
         }
     }

@@ -3,6 +3,13 @@ export function initAudio() {
     const audioIcon = document.getElementById('audio-icon');
     const audioControl = document.getElementById('audio-control');
 
+    // Rotating sound
+    const rotatingAudio = new Audio('./music/rotating.mp3');
+    rotatingAudio.loop = true;
+    rotatingAudio.volume = 0;
+    let fadeOutInterval = null;
+
+
     if (!audio) {
         console.error("Audio element not found!");
         return;
@@ -83,4 +90,46 @@ export function initAudio() {
             });
         });
     }
+}
+
+let rotatingAudioInstance = null;
+let fadeOutInterval = null;
+
+export function playRotatingSound() {
+    if (!rotatingAudioInstance) {
+        rotatingAudioInstance = new Audio('./music/rotating.mp3');
+        rotatingAudioInstance.loop = true;
+    }
+
+    // Clear any existing fade out
+    if (fadeOutInterval) {
+        clearInterval(fadeOutInterval);
+        fadeOutInterval = null;
+    }
+
+    if (rotatingAudioInstance.paused) {
+        rotatingAudioInstance.volume = 0.8;
+        rotatingAudioInstance.play().catch(e => console.log("Rotating sound play failed (likely interaction required):", e));
+    } else {
+        // If already playing, ensure volume is up
+        rotatingAudioInstance.volume = 0.8;
+    }
+}
+
+export function stopRotatingSound() {
+    if (!rotatingAudioInstance || rotatingAudioInstance.paused) return;
+
+    // If already fading out, don't start another one
+    if (fadeOutInterval) return;
+
+    fadeOutInterval = setInterval(() => {
+        if (rotatingAudioInstance.volume > 0.05) {
+            rotatingAudioInstance.volume -= 0.05;
+        } else {
+            rotatingAudioInstance.pause();
+            rotatingAudioInstance.volume = 0;
+            clearInterval(fadeOutInterval);
+            fadeOutInterval = null;
+        }
+    }, 50); // Fade out over ~0.5 seconds
 }
