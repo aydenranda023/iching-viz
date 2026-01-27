@@ -11,6 +11,11 @@
             margin: 0;
             background-color: #e6e6e6;
             overflow: hidden;
+            /* 禁止滚动 */
+            position: fixed;
+            /* 强制固定 body，防止 iOS 橡皮筋效果 */
+            width: 100%;
+            height: 100%;
         }
 
         canvas {
@@ -97,9 +102,31 @@
             width: 100%;
         }
 
+        /* 修改 #input-ui-container */
+        #input-ui-container {
+            position: fixed;
+            /* 使用 fixed 定位 */
+            bottom: 20px;
+            /* 距离视口底部 20px (键盘弹出时，视口底部就是键盘顶部) */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 20;
+            pointer-events: none;
+            /* 容器透传点击 */
+
+            /* 移除之前的 opacity/transition 逻辑，让它一直显示或由 JS 控制 */
+            /* 如果需要淡入淡出，由 JS 的 updateInputUI 控制 class */
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
         #input-ui-container.visible {
             opacity: 1;
             pointer-events: auto;
+            /* 只有显示时才响应点击 */
         }
 
         .input-box {
