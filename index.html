@@ -192,16 +192,19 @@
             /* 与 input-box 保持一致（虽然 padding 在 textarea 上有点复杂，这里主要测量纯文本） */
         }
 
-        /* 键盘弹起时的 UI 调整 (预留) */
-        /* 
-        body.keyboard-active #text-overlay {
-             transform: translate(-50%, -60%); 
-        }
-        
+        /* --- 键盘弹起时的 UI 强制调整 --- */
         body.keyboard-active #input-ui-container {
-             bottom: 20px; 
-        } 
-        */
+            /* 不再依赖 bottom，而是直接定位到屏幕上半部分 */
+            bottom: auto !important;
+            top: 35% !important;
+            transform: translate(-50%, -50%) !important;
+        }
+
+        /* 可选：键盘弹起时，把提示文字隐藏，避免太乱 */
+        body.keyboard-active #text-overlay {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
     </style>
 </head>
 

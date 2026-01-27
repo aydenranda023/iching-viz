@@ -78,64 +78,92 @@ function updateCameraPosition(forceResize = false) {
     const widthUnchanged = Math.abs(currentWidth - initialWindowWidth) < 50;
     const heightReduced = currentHeight < initialWindowHeight * 0.75;
 
-    // 检测是否是键盘弹起
+    // --- 状态检测 ---
+    let justOpened = false;
+    let justClosed = false;
+
     if (isMobile && widthUnchanged && heightReduced) {
         if (!isKeyboardOpen) {
             isKeyboardOpen = true;
-            console.log("Keyboard detected: Shift view up");
-
-            // 键盘弹起：整体内容上移
-            // 1. 3D 场景上移 (通过移动相机和 Target)
-            // 注意：为了让物体在屏幕上看起来"上移"，我们需要把相机"下移" (或者把物体上移)
-            // 这里我们选择下移相机和 Target
-            const shiftAmount = 1.5; // 上移单位
-
-            controls.target.y = originalTargetY - shiftAmount;
-            camera.position.y -= shiftAmount;
-
-            // 2. HTML 内容上移 (添加 CSS class)
-            document.body.classList.add('keyboard-active');
+            justOpened = true;
         }
-        // 键盘打开时不触发 renderer.setSize，防止画面压缩
-        // 但我们需要更新 effectiveAspect 相关的逻辑吗？
-        // 不，我们希望保持原有的 aspect，所以下面的逻辑会处理
-    }
-
-    // 键盘关闭或正常 Resize
-    if (isKeyboardOpen && (!heightReduced || !widthUnchanged)) {
+    } else if (isKeyboardOpen && (!heightReduced || !widthUnchanged)) {
+        // 只有当高度恢复或者宽度剧烈变化（旋转屏幕）时，才认为键盘关了
         isKeyboardOpen = false;
-        console.log("Keyboard closed: Reset view");
-
-        // 恢复 3D 场景位置
-        controls.target.y = originalTargetY;
-        // 恢复相机相对高度
-        const shiftAmount = 1.5;
-        camera.position.y += shiftAmount;
-
-        // 恢复 HTML 内容
-        document.body.classList.remove('keyboard-active');
+        justClosed = true;
     }
 
-    // 正常 Resize 逻辑
-    // 如果键盘打开，使用初始宽高比，否则使用当前宽高比
-    const effectiveAspect = isKeyboardOpen
-        ? initialWindowWidth / initialWindowHeight
-        : currentWidth / currentHeight;
+    // --- 视觉偏移量配置 ---
+    // 这个值控制物体视觉上“上移”的距离
+    const shiftAmount = 2.0;
 
-    // 如果是竖屏（手机），拉远相机以完整显示内容
+    // --- 处理键盘打开 ---
+    if (justOpened) {
+        console.log("Keyboard OPEN: Shifting view");
+
+        // 1. 点云上移：通过把相机和目标点下移来实现
+        // 这里不需要动 controls.target.y，因为动了它会改变旋转中心
+        // 我们直接动相机位置即可，OrbitControls 会在 update() 时重新计算
+        camera.position.y -= shiftAmount;
+        controls.target.y -= shiftAmount;
+
+        // 2. 八卦盘上移 (关键修复)
+        // 八卦盘是相机的子物体。要让它在屏幕上往上跑，
+        // 我们需要增加它的本地 Y 坐标
+        if (baguaSystem) {
+            baguaSystem.position.y = shiftAmount * 0.8; //稍微调小一点，避免顶到天花板
+        }
+
+        // 3. HTML UI 调整
+        document.body.classList.add('keyboard-active');
+    }
+
+    // --- 处理键盘关闭 ---
+    if (justClosed) {
+        console.log("Keyboard CLOSED: Resetting view");
+
+        // 1. 恢复点云位置
+        camera.position.y += shiftAmount;
+        controls.target.y += shiftAmount;
+
+        // 2. 恢复八卦盘位置
+        if (baguaSystem) {
+            baguaSystem.position.y = 0;
+        }
+
+        // 3. 恢复 HTML UI
+        document.body.classList.remove('keyboard-active');
+
+        // 强制触发一次 Resize 以解决"锁死"问题
+        forceResize = true;
+    }
+
+    // --- 处理渲染尺寸与宽高比 (解决锁死问题) ---
+
+    // 如果是键盘开启状态，我们强行使用"初始屏幕比例"
+    // 这样画面不会被挤压变形
+    const effectiveWidth = isKeyboardOpen ? initialWindowWidth : currentWidth;
+    const effectiveHeight = isKeyboardOpen ? initialWindowHeight : currentHeight;
+    const effectiveAspect = effectiveWidth / effectiveHeight;
+
+    // 相机距离调整 (保持之前的逻辑)
     const baseDistance = 4.5;
-    camera.position.z = effectiveAspect < 1 ? baseDistance * 2 : baseDistance;
+    // 如果键盘打开，我们保持原来的视距，不要突然拉远
+    if (!isKeyboardOpen) {
+        camera.position.z = effectiveAspect < 1 ? baseDistance * 2 : baseDistance;
+    }
 
-    // 同时调整八卦图的大小
+    // 更新八卦大小
     resizeBagua(effectiveAspect);
 
-    // 通知交互模块重置缩放状态
+    // 更新交互球大小
     onResize();
 
-    // 只有在非键盘状态下才重置渲染尺寸
+    // 核心修复：只要不是键盘打开状态，或者是强制Resize，就更新渲染器
+    // 这保证了键盘关闭后，renderer 会恢复到全屏大小
     if (!isKeyboardOpen || forceResize) {
         renderer.setSize(currentWidth, currentHeight);
-        camera.aspect = effectiveAspect;
+        camera.aspect = currentWidth / currentHeight; // 注意：这里用真实的宽高比，防止拉伸
         camera.updateProjectionMatrix();
     }
 }
@@ -260,6 +288,14 @@ animate();
 
 // 窗口自适应
 window.addEventListener('resize', () => {
-    // 逻辑全部移至 updateCameraPosition 内部处理
+    // 如果宽度发生巨大变化（比如横竖屏切换），更新初始值
+    if (Math.abs(window.innerWidth - initialWindowWidth) > 100) {
+        initialWindowWidth = window.innerWidth;
+        initialWindowHeight = window.innerHeight;
+        isKeyboardOpen = false; // 强制重置键盘状态
+        document.body.classList.remove('keyboard-active');
+        if (baguaSystem) baguaSystem.position.y = 0;
+    }
+
     updateCameraPosition();
 });
