@@ -19,6 +19,9 @@ let currentMorphFactor = 0.0;
 let targetZoomDist = 0;
 let isZoomInit = false;
 
+let cumulativeRotation = 0; // 累计旋转角度
+let hasTriggeredSpin = false; // 是否已经触发过
+
 // --- References ---
 let _scene, _camera, _renderer, _controls, _baguaSystem;
 let _interactionSphere;
@@ -29,7 +32,7 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
 // --- Initialization ---
-export function initInteraction(scene, camera, renderer, controls, baguaSystem, onMorphStart) {
+export function initInteraction(scene, camera, renderer, controls, baguaSystem, onMorphStart, onSpinThreshold) {
     _scene = scene;
     _camera = camera;
     _renderer = renderer;
@@ -37,6 +40,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     _controls.enableZoom = false; // 禁用原生缩放
     _baguaSystem = baguaSystem;
     _onMorphStart = onMorphStart;
+    _onSpinThreshold = onSpinThreshold;
 
     // Listen for OrbitControls start event (touch/mouse drag)
     // When user starts interacting manually, disable our custom wheel smoothing
@@ -153,13 +157,20 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     canvas.addEventListener('wheel', onWheel, { passive: false });
 }
 
-// --- Event Handlers ---
+let _onSpinThreshold; // 模块级变量
 
+// --- Event Handlers ---
 function onPointerDown(x, y) {
     isDragging = true;
     previousMsgX = x;
     previousMsgY = y;
     baguaVelocity = 0;
+
+    // --- 新增：重置旋转计数 ---
+    cumulativeRotation = 0;
+    hasTriggeredSpin = false;
+    // -----------------------
+
     lastPointerTime = performance.now();
     clickStartX = x;
     clickStartY = y;
@@ -195,15 +206,31 @@ function onPointerMove(x, y) {
     const dTheta = crossProduct / (rMag * rMag);
 
     if (_baguaSystem) {
-        // Apply a sensitivity factor
-        // Inverted to match user expectation (tangent push)
         const sensitivity = -1.5;
-        const rotateDelta = dTheta * sensitivity;
+        const rotateDelta = dTheta * sensitivity; // 这一帧转动的角度
 
         _baguaSystem.rotation.z += rotateDelta;
         baguaVelocity = rotateDelta;
 
-        // Play sound when dragging
+        // --- 新增：累积旋转角度逻辑 ---
+        cumulativeRotation += rotateDelta;
+
+        // 检查是否超过 360 度 (2 * Math.PI)
+        // 且本次拖拽尚未触发过
+        if (!hasTriggeredSpin && Math.abs(cumulativeRotation) > Math.PI * 2) {
+            hasTriggeredSpin = true; // 标记已触发，防止连续触发
+
+            // 触发回调
+            if (_onSpinThreshold) {
+                _onSpinThreshold();
+            }
+
+            // 可选：给一点震动反馈 (仅手机)
+            if (navigator.vibrate) navigator.vibrate(50);
+            console.log("八卦旋转触发！");
+        }
+        // ---------------------------
+
         if (Math.abs(rotateDelta) > 0.0001) {
             playRotatingSound();
         }

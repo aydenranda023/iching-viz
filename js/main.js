@@ -4,13 +4,15 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 // 导入我们的三个子模块
 import { createParticles, updateParticles, updateMorphTarget } from './particles.js';
 import { createBagua, resizeBagua, updateBagua } from './bagua.js';
-import { initText } from './text.js';
 import { initGyro, updateGyro } from './gyro.js';
 import { loadModelPoints } from './modelLoader.js';
 import { initInteraction, updateInteraction, onResize } from './interaction.js';
 import { initElasticInteraction, updateElasticInteraction } from './elastic_interaction.js';
 import { initAudio } from './audio.js';
 import { initInputUI, updateInputUI } from './inputUI.js';
+import { askOracle } from './ai.js';
+import { getInputContent, resetInputUI } from './inputUI.js'; // 导入新接口
+import { initText, showAIResponse, showLoading } from './text.js'; // 导入新接口
 
 initAudio();
 
@@ -139,10 +141,35 @@ initText(() => {
 
 initGyro(particleSystem, baguaSystem);
 
-initInteraction(scene, camera, renderer, controls, baguaSystem, () => {
-    const points = getRandomModelPoints();
-    if (points) updateMorphTarget(points);
-});
+initInteraction(scene, camera, renderer, controls, baguaSystem,
+    // 1. 点击交互球的回调 (Morph)
+    () => {
+        const points = getRandomModelPoints();
+        if (points) updateMorphTarget(points);
+    },
+    // 2. [新增] 八卦旋转一圈的回调 (提交 AI)
+    async () => {
+        // 获取输入框内容
+        const content = getInputContent();
+
+        // 只有当输入框有字时，才触发 AI 逻辑
+        if (content && content.length > 0) {
+            console.log("触发 AI 请求:", content);
+
+            // 1. UI 状态更新
+            resetInputUI(); // 清空并收起输入框
+            showLoading();  // 显示"正在连接..."
+
+            // 2. 发送请求
+            const answer = await askOracle(content);
+
+            // 3. 显示结果 (一段一段)
+            showAIResponse(answer);
+        } else {
+            console.log("转动了八卦，但没有输入内容，忽略。");
+        }
+    }
+);
 
 initElasticInteraction(scene, camera, renderer, controls, particleSystem);
 initInputUI();

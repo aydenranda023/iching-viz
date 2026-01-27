@@ -119,3 +119,19 @@ export function updateInputUI(cameraDist) {
         }
     }
 }
+
+// --- 新增：供 main.js 调用的接口 ---
+
+export function getInputContent() {
+    if (!textarea) return "";
+    return textarea.value.trim();
+}
+
+export function resetInputUI() {
+    if (!textarea) return;
+    textarea.value = '';
+    textarea.blur(); // 收起键盘
+    adjustSize();    // 重置大小
+    // 如果需要，可以在这里隐藏输入框
+    // if (container) container.classList.remove('visible');
+}
