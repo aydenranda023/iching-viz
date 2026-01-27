@@ -2,10 +2,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // 1. 填入你的 API Key
-const API_KEY = "AIzaSyAyROmfhaLSNU_KwDxV12cMYv0vfyJ3Lq8";
+const API_KEY = "AIzaSyDYcJqJsNqZXdPJ_Z5nyjoEwK4-YVZ25XA";
 
 // 2. 填入刚才运行脚本得到的【文件链接】 (URI)
-const BOOK_FILE_URI = "https://generativelanguage.googleapis.com/v1beta/files/uli08md0qle2";
+const BOOK_FILE_URI = "https://generativelanguage.googleapis.com/v1beta/files/ar5zc6j96ew6";
 
 const genAI = new GoogleGenerativeAI(API_KEY);
 

@@ -42,13 +42,18 @@ async function startDefaultCycle(getColor) {
     if (isDisclaimerMode) {
         // --- 免责声明模式 ---
         content = disclaimerContent[disclaimerIndex];
-        // 免责声明保持默认字体 (或根据需求修改)
         textElement.style.fontFamily = "inherit";
+
+        // [修改这里] 开头文字大小
+        textElement.style.fontSize = "14px";
     } else {
         // --- 正常轮播模式 ---
         content = defaultContent[defaultIndex];
-        // 正常文字切换为楷体
-        textElement.style.fontFamily = "KaiTi, STKaiti, serif";
+        // 正常文字切换为楷体 (中文) + Old Style Serifs (英文)
+        textElement.style.fontFamily = '"Garamond", "Georgia", "Times New Roman", "KaiTi", "STKaiti", serif';
+
+        // [修改这里] 普通文字大小
+        textElement.style.fontSize = "22px";
     }
 
     textElement.innerHTML = content;
