@@ -66,7 +66,7 @@ let initialWindowHeight = window.innerHeight;
 let isKeyboardOpen = false;
 const originalTargetY = 0;
 
-function updateCameraPosition(forceResize = false) {
+function updateCameraPosition(isInit = false) {
     const currentWidth = window.innerWidth;
     const currentHeight = window.innerHeight;
 
@@ -117,8 +117,10 @@ function updateCameraPosition(forceResize = false) {
 
     // 相机距离调整 (保持之前的逻辑)
     const baseDistance = 4.5;
-    // 如果键盘打开，我们保持原来的视距，不要突然拉远
-    if (!isKeyboardOpen) {
+
+    // 关键修改：只在初始化时设置相机距离，或者当键盘未打开且是初始化时
+    // 这样 resize 不会重置用户的缩放
+    if (isInit) {
         camera.position.z = effectiveAspect < 1 ? baseDistance * 2 : baseDistance;
     }
 
@@ -262,5 +264,5 @@ window.addEventListener('resize', () => {
         document.body.classList.remove('keyboard-active');
     }
 
-    updateCameraPosition();
+    updateCameraPosition(false);
 });
