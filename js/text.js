@@ -2,6 +2,7 @@ export function initText(getColor) {
     const textContent = [
         "本产品基于传统周易哲学与现代随机算法生成，仅供娱乐与心理疗愈，不作为现实决策依据。",
         "请相信科学，理性生活。",
+
         "想象焦虑是一滴墨入水，被巨大的空白稀释、消解...",
         "知其白，守其黑，为天下式。",
         `<span class="hex-highlight">既济 · Completion</span>黑白咬合，阴阳归位。能量处于完美的平衡。`,

@@ -61,6 +61,11 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     let lastTouchTime = 0;
 
     canvas.addEventListener('mousedown', (e) => {
+        // Ensure input loses focus when interacting with canvas
+        if (document.activeElement && document.activeElement !== canvas) {
+            document.activeElement.blur();
+        }
+
         // Ignore emulated mouse events (within 500ms of a touch)
         if (performance.now() - lastTouchTime < 500) return;
 
@@ -86,6 +91,11 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     let multiTouchCooldown = 0;
 
     canvas.addEventListener('touchstart', (e) => {
+        // Ensure input loses focus when interacting with canvas
+        if (document.activeElement && document.activeElement !== canvas) {
+            document.activeElement.blur();
+        }
+
         lastTouchTime = performance.now();
         _controls.enableZoom = true;
 
