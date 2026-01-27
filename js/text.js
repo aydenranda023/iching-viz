@@ -1,8 +1,9 @@
 export function initText(getColor) {
     const textContent = [
-        "本产品基于传统周易哲学与现代随机算法生成，内容仅供娱乐与心理舒缓，不作为现实决策依据。请相信科学，理性生活。",
-        "知其白，守其黑，为天下式。",
+        "本产品基于传统周易哲学与现代随机算法生成，内容仅供娱乐与心理舒缓，不作为现实决策依据。",
+        "请相信科学，理性生活。",
         "想象焦虑是一滴墨入水，被巨大的空白稀释、消解...",
+        "知其白，守其黑，为天下式。",
         `<span class="hex-highlight">既济 · Completion</span>黑白咬合，阴阳归位。能量处于完美的平衡。`,
         "在这一张巨大的灰色宣纸上，当下的困扰不过是一个噪点。",
         `<span class="hex-highlight">屯 · Beginnings</span>混沌之中，秩序正在萌芽。`,
@@ -27,7 +28,7 @@ export function initText(getColor) {
             textElement.classList.add('visible');
 
             // 3. 停留阅读 (固定 6秒)
-            await new Promise(r => setTimeout(r, 6000));
+            await new Promise(r => setTimeout(r, 5000));
 
             // 4. 淡出 (移除 class)
             textElement.classList.remove('visible');
