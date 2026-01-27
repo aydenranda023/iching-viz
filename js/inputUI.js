@@ -24,6 +24,12 @@ export function initInputUI() {
 
     // 初始化大小
     adjustSize();
+
+    // 阻止事件冒泡，防止点击输入框触发 3D 场景交互
+    const stopProp = (e) => e.stopPropagation();
+    textarea.addEventListener('mousedown', stopProp);
+    textarea.addEventListener('touchstart', stopProp);
+    textarea.addEventListener('click', stopProp);
 }
 
 function adjustSize() {

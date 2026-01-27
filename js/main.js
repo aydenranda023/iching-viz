@@ -25,21 +25,6 @@ scene.fog = new THREE.Fog(0xd1d1d1, 13, 50);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
 
-// 响应式相机位置调整函数
-function updateCameraPosition() {
-    const aspect = window.innerWidth / window.innerHeight;
-    // 如果是竖屏（手机），拉远相机以完整显示内容
-    const baseDistance = 4.5;
-    camera.position.z = aspect < 1 ? baseDistance * 2 : baseDistance;
-
-    // 同时调整八卦图的大小
-    resizeBagua(aspect);
-
-    // 通知交互模块重置缩放状态
-    onResize();
-}
-updateCameraPosition(); // 初始化调用
-
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -74,6 +59,87 @@ controls.touches = {
     ONE: null,                // 单指留给自定义八卦旋转
     TWO: THREE.TOUCH.DOLLY_ROTATE // 双指缩放 + 旋转
 };
+
+// 响应式相机位置调整函数
+let initialWindowWidth = window.innerWidth;
+let initialWindowHeight = window.innerHeight;
+let isKeyboardOpen = false;
+const originalTargetY = 0;
+
+function updateCameraPosition(forceResize = false) {
+    const currentWidth = window.innerWidth;
+    const currentHeight = window.innerHeight;
+
+    // 移动端键盘检测逻辑：
+    // 1. 宽度基本不变 (允许少量误差)
+    // 2. 高度显著减小 (小于初始高度的 75%)
+    // 3. 且当前是移动端 (宽度小于 768)
+    const isMobile = currentWidth < 768;
+    const widthUnchanged = Math.abs(currentWidth - initialWindowWidth) < 50;
+    const heightReduced = currentHeight < initialWindowHeight * 0.75;
+
+    // 检测是否是键盘弹起
+    if (isMobile && widthUnchanged && heightReduced) {
+        if (!isKeyboardOpen) {
+            isKeyboardOpen = true;
+            console.log("Keyboard detected: Shift view up");
+
+            // 键盘弹起：整体内容上移
+            // 1. 3D 场景上移 (通过移动相机和 Target)
+            // 注意：为了让物体在屏幕上看起来"上移"，我们需要把相机"下移" (或者把物体上移)
+            // 这里我们选择下移相机和 Target
+            const shiftAmount = 1.5; // 上移单位
+
+            controls.target.y = originalTargetY - shiftAmount;
+            camera.position.y -= shiftAmount;
+
+            // 2. HTML 内容上移 (添加 CSS class)
+            document.body.classList.add('keyboard-active');
+        }
+        // 键盘打开时不触发 renderer.setSize，防止画面压缩
+        // 但我们需要更新 effectiveAspect 相关的逻辑吗？
+        // 不，我们希望保持原有的 aspect，所以下面的逻辑会处理
+    }
+
+    // 键盘关闭或正常 Resize
+    if (isKeyboardOpen && (!heightReduced || !widthUnchanged)) {
+        isKeyboardOpen = false;
+        console.log("Keyboard closed: Reset view");
+
+        // 恢复 3D 场景位置
+        controls.target.y = originalTargetY;
+        // 恢复相机相对高度
+        const shiftAmount = 1.5;
+        camera.position.y += shiftAmount;
+
+        // 恢复 HTML 内容
+        document.body.classList.remove('keyboard-active');
+    }
+
+    // 正常 Resize 逻辑
+    // 如果键盘打开，使用初始宽高比，否则使用当前宽高比
+    const effectiveAspect = isKeyboardOpen
+        ? initialWindowWidth / initialWindowHeight
+        : currentWidth / currentHeight;
+
+    // 如果是竖屏（手机），拉远相机以完整显示内容
+    const baseDistance = 4.5;
+    camera.position.z = effectiveAspect < 1 ? baseDistance * 2 : baseDistance;
+
+    // 同时调整八卦图的大小
+    resizeBagua(effectiveAspect);
+
+    // 通知交互模块重置缩放状态
+    onResize();
+
+    // 只有在非键盘状态下才重置渲染尺寸
+    if (!isKeyboardOpen || forceResize) {
+        renderer.setSize(currentWidth, currentHeight);
+        camera.aspect = effectiveAspect;
+        camera.updateProjectionMatrix();
+    }
+}
+updateCameraPosition(true); // 初始化调用
 
 // --- 2. 加载各个模块 ---
 
@@ -194,9 +260,6 @@ animate();
 
 // 窗口自适应
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
+    // 逻辑全部移至 updateCameraPosition 内部处理
     updateCameraPosition();
 });
