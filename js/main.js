@@ -94,23 +94,6 @@ function updateCameraPosition(isInit = false) {
     }
 
     // --- 处理键盘打开 ---
-    if (justOpened) {
-        console.log("Keyboard OPEN: Resizing view");
-        // 3. HTML UI 调整
-        document.body.classList.add('keyboard-active');
-    }
-
-    // --- 处理键盘关闭 ---
-    if (justClosed) {
-        console.log("Keyboard CLOSED: Resetting view");
-        // 3. 恢复 HTML UI
-        document.body.classList.remove('keyboard-active');
-    }
-
-    // --- 处理渲染尺寸与宽高比 (解决锁死问题) ---
-
-    // 始终使用当前窗口大小，不再锁定为 initialWindowWidth/Height
-    // 这样画面会被裁切适应新的视口，而不是被挤压
     const effectiveWidth = currentWidth;
     const effectiveHeight = currentHeight;
     const effectiveAspect = effectiveWidth / effectiveHeight;
