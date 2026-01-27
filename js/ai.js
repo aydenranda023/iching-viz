@@ -18,7 +18,18 @@ const SYSTEM_PROMPT = `
 如果书里没提到，就回答"数据库中无此记录，天机不可泄露"。
 `;
 
+let requestTimestamps = [];
+
 export async function askOracle(userContent) {
+    // Rate Limiting: 5 requests per 60 seconds
+    const now = Date.now();
+    requestTimestamps = requestTimestamps.filter(t => now - t < 60000);
+
+    if (requestTimestamps.length >= 5) {
+        return "【系统过载】天机演算过于频繁，请稍候再试（每分钟限5次）。";
+    }
+    requestTimestamps.push(now);
+
     try {
         // 使用 gemini-1.5-flash，它免费且记性好
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
