@@ -204,10 +204,21 @@ if (window.visualViewport) {
 
     viewport.addEventListener('resize', onViewportResize);
 
+    // Update base height on orientation change (window resize)
+    let lastWidth = window.innerWidth;
+
     window.addEventListener('resize', () => {
-        if (!document.body.classList.contains('keyboard-active')) {
+        const currentWidth = window.innerWidth;
+
+        // Only update baseHeight if:
+        // 1. Width changed significantly (Orientation change)
+        // 2. OR Viewport got LARGER (e.g. address bar hidden)
+        // We IGNORE height decreases if width is constant (likely keyboard opening)
+        if (Math.abs(currentWidth - lastWidth) > 50 || viewport.height > baseHeight) {
+            // Delay slightly to ensure viewport is settled
             setTimeout(() => {
                 baseHeight = viewport.height;
+                lastWidth = currentWidth;
             }, 100);
         }
     });
