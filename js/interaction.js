@@ -10,6 +10,7 @@ let lastPointerTime = 0;
 let clickStartX = 0;
 let clickStartY = 0;
 let isMultiTouch = false;
+let isWheelZooming = false; // NEW: Track if we are zooming via wheel
 import { playRotatingSound, stopRotatingSound } from './audio.js';
 
 let isMorphing = false;
@@ -36,6 +37,14 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     _controls.enableZoom = false; // 禁用原生缩放
     _baguaSystem = baguaSystem;
     _onMorphStart = onMorphStart;
+
+    // Listen for OrbitControls start event (touch/mouse drag)
+    // When user starts interacting manually, disable our custom wheel smoothing
+    _controls.addEventListener('start', () => {
+        isWheelZooming = false;
+        // Sync target distance to current to prevent jump when wheeling later
+        targetZoomDist = _camera.position.distanceTo(_controls.target);
+    });
 
     // Create invisible interaction sphere
     const interactionGeometry = new THREE.SphereGeometry(3.0, 32, 32);
@@ -233,6 +242,12 @@ let wheelTimeout;
 function onWheel(event) {
     event.preventDefault();
 
+    // If we weren't wheel zooming, sync up first to avoid jumps
+    if (!isWheelZooming) {
+        targetZoomDist = _camera.position.distanceTo(_controls.target);
+        isWheelZooming = true;
+    }
+
     if (!isZoomInit) {
         targetZoomDist = _camera.position.distanceTo(_controls.target);
         isZoomInit = true;
@@ -315,8 +330,8 @@ export function updateInteraction(time) {
         _baguaSystem.scale.setScalar(finalS);
     }
 
-    // 4. Camera Zoom Viscosity
-    if (isZoomInit || Math.abs(targetZoomDist) > 0.001) {
+    // 4. Camera Zoom Viscosity (Only when using Wheel)
+    if (isWheelZooming && (isZoomInit || Math.abs(targetZoomDist) > 0.001)) {
         if (!isZoomInit && targetZoomDist === 0) {
             targetZoomDist = _camera.position.distanceTo(_controls.target);
             isZoomInit = true;
@@ -330,6 +345,9 @@ export function updateInteraction(time) {
             const offset = new THREE.Vector3().copy(_camera.position).sub(_controls.target);
             offset.setLength(newDist);
             _camera.position.copy(_controls.target).add(offset);
+        } else {
+            // Reached target, stop wheel zooming state
+            // isWheelZooming = false; // Optional: auto-disable
         }
     }
 }
@@ -339,5 +357,6 @@ export function onResize() {
     if (_camera && _controls) {
         targetZoomDist = _camera.position.distanceTo(_controls.target);
         isZoomInit = true;
+        isWheelZooming = false; // Reset wheel zoom on resize
     }
 }
