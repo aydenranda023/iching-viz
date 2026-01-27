@@ -355,7 +355,18 @@ export function updateInteraction(time) {
     const currentDist = _camera.position.distanceTo(_controls.target);
     const targetScaleMultiplier = baseDistance / Math.max(0.1, currentDist);
 
-    window.currentSmoothedScale += (targetScaleMultiplier - window.currentSmoothedScale) * 0.008;
+    const diff = targetScaleMultiplier - window.currentSmoothedScale;
+
+    // 默认慢速 (0.008)
+    let lerpFactor = 0.008;
+
+    // 如果是缩小阶段 (diff < 0)，且差异较大，则加速
+    if (diff < 0) {
+        // 动态加速：差异越大，速度越快。最大增加 0.1
+        lerpFactor += Math.min(0.05, Math.abs(diff) * 0.2);
+    }
+
+    window.currentSmoothedScale += diff * lerpFactor;
 
     if (_baguaSystem) {
         const baseS = _baguaSystem.userData.baseScale || 1.5;

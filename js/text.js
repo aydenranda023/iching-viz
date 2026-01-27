@@ -106,7 +106,7 @@ export function showLoading() {
 
     setTimeout(() => {
         textElement.style.color = '#333';
-        textElement.innerHTML = "正在连接阿卡西记录...<br>演算中...";
+        textElement.innerHTML = "正在连接...<br>演算中...";
         textElement.classList.add('visible');
     }, 1000);
 }

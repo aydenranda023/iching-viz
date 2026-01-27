@@ -100,7 +100,8 @@ const particleCount = isMobileDevice ? 150000 : 400000;
 const modelFiles = [
     './model/tai_chi.glb',
     './model/上古神剑.glb',
-    './model/黄金鸭子.glb'
+    './model/黄金鸭子.glb',
+    './model/户型.glb'
 ];
 const modelCache = {};
 
