@@ -66,70 +66,108 @@ let initialWindowHeight = window.innerHeight;
 let isKeyboardOpen = false;
 const originalTargetY = 0;
 
-// --- 响应式视口调整 (Visual Viewport API) ---
-// 这是解决移动端键盘遮挡的终极方案
+function updateCameraPosition(forceResize = false) {
+    const currentWidth = window.innerWidth;
+    const currentHeight = window.innerHeight;
 
-function handleViewportResize() {
-    // 1. 获取当前真实的可视区域 (减去键盘后的区域)
-    const viewport = window.visualViewport;
-    const width = viewport.width;
-    const height = viewport.height;
-    const offsetTop = viewport.offsetTop;
+    // 移动端键盘检测逻辑：
+    // 1. 宽度基本不变 (允许少量误差)
+    // 2. 高度显著减小 (小于初始高度的 75%)
+    // 3. 且当前是移动端 (宽度小于 768)
+    const isMobile = currentWidth < 768;
+    const widthUnchanged = Math.abs(currentWidth - initialWindowWidth) < 50;
+    const heightReduced = currentHeight < initialWindowHeight * 0.75;
 
-    // 2. 调整渲染器大小
-    // 强制画布填满当前的可视区域
-    renderer.setSize(width, height);
+    // --- 状态检测 ---
+    let justOpened = false;
+    let justClosed = false;
 
-    // 3. 调整相机比例
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-
-    // 4. 调整八卦盘大小 (保持视觉比例一致)
-    resizeBagua(camera.aspect);
-
-    // 5. 调整相机距离 (可选)
-    // 当高度急剧变小(键盘弹出)时，为了防止物体看起来太近或被切掉，
-    // 我们可以根据宽高比动态拉远一点相机。
-    // 如果想要"裁剪"效果(物体变大)，则不需要这步。
-    // 这里保留一个基础逻辑，确保竖屏下物体完整。
-    const baseDistance = 4.5;
-    if (camera.aspect < 1) {
-        // 竖屏或键盘弹出导致的高瘦窗口，稍微拉远
-        camera.position.z = baseDistance / camera.aspect * 0.6;
-    } else {
-        camera.position.z = baseDistance;
+    if (isMobile && widthUnchanged && heightReduced) {
+        if (!isKeyboardOpen) {
+            isKeyboardOpen = true;
+            justOpened = true;
+        }
+    } else if (isKeyboardOpen && (!heightReduced || !widthUnchanged)) {
+        // 只有当高度恢复或者宽度剧烈变化（旋转屏幕）时，才认为键盘关了
+        isKeyboardOpen = false;
+        justClosed = true;
     }
 
-    // 6. 更新 UI 位置 (关键)
-    // 我们需要告诉 CSS，现在的"屏幕底部"在哪里。
-    // 虽然 renderer 变小了，但 HTML 布局有时候需要手动修正。
-    document.body.style.height = height + 'px';
-    // 某些浏览器(如 iOS Safari)滚动后 offsetTop 会变，需要修正 canvas 位置
-    renderer.domElement.style.position = 'fixed';
-    renderer.domElement.style.left = viewport.offsetLeft + 'px';
-    renderer.domElement.style.top = viewport.offsetTop + 'px';
+    // --- 视觉偏移量配置 ---
+    // 这个值控制物体视觉上“上移”的距离
+    const shiftAmount = 2.0;
 
-    // 更新交互球
+    // --- 处理键盘打开 ---
+    if (justOpened) {
+        console.log("Keyboard OPEN: Shifting view");
+
+        // 1. 点云上移：通过把相机和目标点下移来实现
+        // 这里不需要动 controls.target.y，因为动了它会改变旋转中心
+        // 我们直接动相机位置即可，OrbitControls 会在 update() 时重新计算
+        camera.position.y -= shiftAmount;
+        controls.target.y -= shiftAmount;
+
+        // 2. 八卦盘上移 (关键修复)
+        // 八卦盘是相机的子物体。要让它在屏幕上往上跑，
+        // 我们需要增加它的本地 Y 坐标
+        if (baguaSystem) {
+            baguaSystem.position.y = shiftAmount * 0.8; //稍微调小一点，避免顶到天花板
+        }
+
+        // 3. HTML UI 调整
+        document.body.classList.add('keyboard-active');
+    }
+
+    // --- 处理键盘关闭 ---
+    if (justClosed) {
+        console.log("Keyboard CLOSED: Resetting view");
+
+        // 1. 恢复点云位置
+        camera.position.y += shiftAmount;
+        controls.target.y += shiftAmount;
+
+        // 2. 恢复八卦盘位置
+        if (baguaSystem) {
+            baguaSystem.position.y = 0;
+        }
+
+        // 3. 恢复 HTML UI
+        document.body.classList.remove('keyboard-active');
+
+        // 强制触发一次 Resize 以解决"锁死"问题
+        forceResize = true;
+    }
+
+    // --- 处理渲染尺寸与宽高比 (解决锁死问题) ---
+
+    // 如果是键盘开启状态，我们强行使用"初始屏幕比例"
+    // 这样画面不会被挤压变形
+    const effectiveWidth = isKeyboardOpen ? initialWindowWidth : currentWidth;
+    const effectiveHeight = isKeyboardOpen ? initialWindowHeight : currentHeight;
+    const effectiveAspect = effectiveWidth / effectiveHeight;
+
+    // 相机距离调整 (保持之前的逻辑)
+    const baseDistance = 4.5;
+    // 如果键盘打开，我们保持原来的视距，不要突然拉远
+    if (!isKeyboardOpen) {
+        camera.position.z = effectiveAspect < 1 ? baseDistance * 2 : baseDistance;
+    }
+
+    // 更新八卦大小
+    resizeBagua(effectiveAspect);
+
+    // 更新交互球大小
     onResize();
-}
 
-// 监听 Visual Viewport 的变化 (键盘弹出/收起、屏幕旋转)
-if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', handleViewportResize);
-    window.visualViewport.addEventListener('scroll', handleViewportResize);
-} else {
-    // 降级兼容
-    window.addEventListener('resize', () => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
+    // 核心修复：只要不是键盘打开状态，或者是强制Resize，就更新渲染器
+    // 这保证了键盘关闭后，renderer 会恢复到全屏大小
+    if (!isKeyboardOpen || forceResize) {
+        renderer.setSize(currentWidth, currentHeight);
+        camera.aspect = currentWidth / currentHeight; // 注意：这里用真实的宽高比，防止拉伸
         camera.updateProjectionMatrix();
-        resizeBagua(camera.aspect);
-    });
+    }
 }
-
-// 初始化调用一次
-// (注意：这里不要直接调，等 DOM 加载完)
-setTimeout(handleViewportResize, 100);
+updateCameraPosition(true); // 初始化调用
 
 // --- 2. 加载各个模块 ---
 
