@@ -1,8 +1,12 @@
 let textElement = null;
 let isAIResponseMode = false; // 是否正在显示 AI 回复
-let defaultContent = [
+
+let disclaimerContent = [
     "本产品基于传统周易哲学与现代随机算法生成，仅供娱乐与心理疗愈，不作为现实决策依据。",
-    "请相信科学，理性生活。",
+    "请相信科学，理性生活。"
+];
+
+let defaultContent = [
     "想象焦虑是一滴墨入水，被巨大的空白稀释、消解...",
     "知其白，守其黑，为天下式。",
     `<span class="hex-highlight">既济 · Completion</span>黑白咬合，阴阳归位。能量处于完美的平衡。`,
@@ -10,7 +14,10 @@ let defaultContent = [
     `<span class="hex-highlight">屯 · Beginnings</span>混沌之中，秩序正在萌芽。`,
     "万物负阴而抱阳，冲气以为和。"
 ];
+
 let defaultIndex = 0;
+let disclaimerIndex = 0;
+let isDisclaimerMode = true; // 初始为免责声明模式
 let currentTimeout = null;
 
 export function initText(getColor) {
@@ -27,24 +34,54 @@ async function startDefaultCycle(getColor) {
         textElement.style.color = getColor();
     }
 
-    // 1. 设置内容
-    textElement.innerHTML = defaultContent[defaultIndex];
+    // 1. 确定内容和字体
+    let content = "";
+    let stayTime = 6000; // 默认停留 6 秒
+    let fadeOutWait = 1600; // 默认淡出后等待 1.6 秒
+
+    if (isDisclaimerMode) {
+        // --- 免责声明模式 ---
+        content = disclaimerContent[disclaimerIndex];
+        // 免责声明保持默认字体 (或根据需求修改)
+        textElement.style.fontFamily = "inherit";
+    } else {
+        // --- 正常轮播模式 ---
+        content = defaultContent[defaultIndex];
+        // 正常文字切换为楷体
+        textElement.style.fontFamily = "KaiTi, STKaiti, serif";
+    }
+
+    textElement.innerHTML = content;
 
     // 2. 淡入
     textElement.classList.add('visible');
 
-    // 3. 停留 6 秒 (使用 setTimeout 方便打断)
+    // 3. 停留
     currentTimeout = setTimeout(() => {
         // 4. 淡出
         textElement.classList.remove('visible');
 
-        // 5. 等待淡出动画结束 (1.6s)
-        currentTimeout = setTimeout(() => {
-            defaultIndex = (defaultIndex + 1) % defaultContent.length;
-            startDefaultCycle(getColor); // 递归调用
-        }, 1600);
+        // 特殊逻辑：如果是免责声明的最后一句，淡出后要等待更久
+        if (isDisclaimerMode && disclaimerIndex === disclaimerContent.length - 1) {
+            fadeOutWait = 3000; // 长等待 3 秒
+        }
 
-    }, 6000);
+        // 5. 等待淡出动画结束
+        currentTimeout = setTimeout(() => {
+            if (isDisclaimerMode) {
+                disclaimerIndex++;
+                if (disclaimerIndex >= disclaimerContent.length) {
+                    // 免责声明播放完毕，切换到正常模式
+                    isDisclaimerMode = false;
+                    defaultIndex = 0;
+                }
+            } else {
+                defaultIndex = (defaultIndex + 1) % defaultContent.length;
+            }
+            startDefaultCycle(getColor); // 递归调用
+        }, fadeOutWait);
+
+    }, stayTime);
 }
 
 // --- 新增：显示 AI 回复 (一段一段显示) ---
