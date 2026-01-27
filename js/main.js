@@ -93,27 +93,9 @@ function updateCameraPosition(forceResize = false) {
         justClosed = true;
     }
 
-    // --- 视觉偏移量配置 ---
-    // 这个值控制物体视觉上“上移”的距离
-    const shiftAmount = 2.0;
-
     // --- 处理键盘打开 ---
     if (justOpened) {
-        console.log("Keyboard OPEN: Shifting view");
-
-        // 1. 点云上移：通过把相机和目标点下移来实现
-        // 这里不需要动 controls.target.y，因为动了它会改变旋转中心
-        // 我们直接动相机位置即可，OrbitControls 会在 update() 时重新计算
-        camera.position.y -= shiftAmount;
-        controls.target.y -= shiftAmount;
-
-        // 2. 八卦盘上移 (关键修复)
-        // 八卦盘是相机的子物体。要让它在屏幕上往上跑，
-        // 我们需要增加它的本地 Y 坐标
-        if (baguaSystem) {
-            baguaSystem.position.y = shiftAmount * 0.8; //稍微调小一点，避免顶到天花板
-        }
-
+        console.log("Keyboard OPEN: Resizing view");
         // 3. HTML UI 调整
         document.body.classList.add('keyboard-active');
     }
@@ -121,29 +103,16 @@ function updateCameraPosition(forceResize = false) {
     // --- 处理键盘关闭 ---
     if (justClosed) {
         console.log("Keyboard CLOSED: Resetting view");
-
-        // 1. 恢复点云位置
-        camera.position.y += shiftAmount;
-        controls.target.y += shiftAmount;
-
-        // 2. 恢复八卦盘位置
-        if (baguaSystem) {
-            baguaSystem.position.y = 0;
-        }
-
         // 3. 恢复 HTML UI
         document.body.classList.remove('keyboard-active');
-
-        // 强制触发一次 Resize 以解决"锁死"问题
-        forceResize = true;
     }
 
     // --- 处理渲染尺寸与宽高比 (解决锁死问题) ---
 
-    // 如果是键盘开启状态，我们强行使用"初始屏幕比例"
-    // 这样画面不会被挤压变形
-    const effectiveWidth = isKeyboardOpen ? initialWindowWidth : currentWidth;
-    const effectiveHeight = isKeyboardOpen ? initialWindowHeight : currentHeight;
+    // 始终使用当前窗口大小，不再锁定为 initialWindowWidth/Height
+    // 这样画面会被裁切适应新的视口，而不是被挤压
+    const effectiveWidth = currentWidth;
+    const effectiveHeight = currentHeight;
     const effectiveAspect = effectiveWidth / effectiveHeight;
 
     // 相机距离调整 (保持之前的逻辑)
@@ -159,13 +128,10 @@ function updateCameraPosition(forceResize = false) {
     // 更新交互球大小
     onResize();
 
-    // 核心修复：只要不是键盘打开状态，或者是强制Resize，就更新渲染器
-    // 这保证了键盘关闭后，renderer 会恢复到全屏大小
-    if (!isKeyboardOpen || forceResize) {
-        renderer.setSize(currentWidth, currentHeight);
-        camera.aspect = currentWidth / currentHeight; // 注意：这里用真实的宽高比，防止拉伸
-        camera.updateProjectionMatrix();
-    }
+    // 核心修复：始终更新渲染器大小
+    renderer.setSize(currentWidth, currentHeight);
+    camera.aspect = effectiveAspect;
+    camera.updateProjectionMatrix();
 }
 updateCameraPosition(true); // 初始化调用
 
@@ -294,7 +260,6 @@ window.addEventListener('resize', () => {
         initialWindowHeight = window.innerHeight;
         isKeyboardOpen = false; // 强制重置键盘状态
         document.body.classList.remove('keyboard-active');
-        if (baguaSystem) baguaSystem.position.y = 0;
     }
 
     updateCameraPosition();
