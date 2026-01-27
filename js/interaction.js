@@ -61,10 +61,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     let lastTouchTime = 0;
 
     canvas.addEventListener('mousedown', (e) => {
-        // Ensure input loses focus when interacting with canvas
-        if (document.activeElement && document.activeElement !== canvas) {
-            document.activeElement.blur();
-        }
+        e.preventDefault(); // Prevent focus loss on input
 
         // Ignore emulated mouse events (within 500ms of a touch)
         if (performance.now() - lastTouchTime < 500) return;
@@ -91,10 +88,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
     let multiTouchCooldown = 0;
 
     canvas.addEventListener('touchstart', (e) => {
-        // Ensure input loses focus when interacting with canvas
-        if (document.activeElement && document.activeElement !== canvas) {
-            document.activeElement.blur();
-        }
+        if (e.cancelable) e.preventDefault(); // Prevent focus loss on input
 
         lastTouchTime = performance.now();
         _controls.enableZoom = true;
@@ -111,9 +105,11 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
                 onPointerDown(e.touches[0].clientX, e.touches[0].clientY);
             }
         }
-    }, { passive: true });
+    }, { passive: false });
 
     canvas.addEventListener('touchmove', (e) => {
+        if (e.cancelable) e.preventDefault(); // Prevent default scrolling
+
         lastTouchTime = performance.now();
 
         if (isMultiTouch || performance.now() < multiTouchCooldown) return;
@@ -121,7 +117,7 @@ export function initInteraction(scene, camera, renderer, controls, baguaSystem, 
         if (e.touches.length === 1) {
             onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
         }
-    }, { passive: true });
+    }, { passive: false });
 
     canvas.addEventListener('touchend', (e) => {
         lastTouchTime = performance.now();
