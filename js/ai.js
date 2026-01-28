@@ -1,59 +1,103 @@
+// --- 配置区域 ---
+const MAX_DAILY_USAGE = 3; // 每天限制算命 3 次
+const STORAGE_KEY_DATE = 'oracle_last_date';
+const STORAGE_KEY_COUNT = 'oracle_usage_count';
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// 1. 填入你的 API Key
-const API_KEY = "AIzaSyDYcJqJsNqZXdPJ_Z5nyjoEwK4-YVZ25XA";
-
-// 2. 填入刚才运行脚本得到的【文件链接】 (URI)
-const BOOK_FILE_URI = "https://generativelanguage.googleapis.com/v1beta/files/ar5zc6j96ew6";
-
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-// 3. 把“人设”写在这里，因为没有缓存帮我们记住了
-const SYSTEM_PROMPT = `
-你是一位精通《断易天机》的算命大师。
-用户会向你提问或报出卦象。
-请你**严格基于**我同时传给你的这份书籍文件内容进行解答。
-不要使用书里没有的现代心理学知识。
-语言风格：神秘、古朴、带有修仙风格。
-如果书里没提到，就回答"无此记录，天机不可泄露"。
-`;
-
-let requestTimestamps = [];
-
-export async function askOracle(userContent) {
-    // Rate Limiting: 5 requests per 60 seconds
-    const now = Date.now();
-    requestTimestamps = requestTimestamps.filter(t => now - t < 60000);
-
-    if (requestTimestamps.length >= 5) {
-        return "【系统过载】天机演算过于频繁，请稍候再试（每分钟限5次）。";
+/**
+ * 检查是否还有剩余次数
+ * @returns {boolean} true=可以算, false=次数用完
+ */
+function checkDailyLimit() {
+    const today = new Date().toDateString(); // 获取今天的日期字符串 (e.g., "Tue Jan 27 2026")
+    const lastDate = localStorage.getItem(STORAGE_KEY_DATE);
+    
+    // 如果日期变了，重置计数器
+    if (lastDate !== today) {
+        localStorage.setItem(STORAGE_KEY_DATE, today);
+        localStorage.setItem(STORAGE_KEY_COUNT, '0');
+        return true;
     }
-    requestTimestamps.push(now);
+
+    // 获取当前已用次数
+    const currentCount = parseInt(localStorage.getItem(STORAGE_KEY_COUNT) || '0');
+    return currentCount < MAX_DAILY_USAGE;
+}
+
+/**
+ * 增加一次使用计数
+ */
+function incrementUsage() {
+    const currentCount = parseInt(localStorage.getItem(STORAGE_KEY_COUNT) || '0');
+    localStorage.setItem(STORAGE_KEY_COUNT, (currentCount + 1).toString());
+}
+
+/**
+ * 核心请求函数
+ */
+export async function askOracle(userContent) {
+    // 1. 【限制机制】先检查今日运势余额
+    if (!checkDailyLimit()) {
+        console.log("今日次数已用完");
+        return "【卦限已尽】一日不过三，天机不可强求。\n请静心修整，明日再来。";
+    }
 
     try {
-        // 使用 gemini-2.5-flash-lite
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        console.log("正在连接后端 API...");
+        
+        // 2. 发送请求给 Vercel 后端
+        const response = await fetch('/api/index', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ question: userContent }),
+        });
 
-        const result = await model.generateContent([
-            // 告诉 AI：先读这本书
-            { fileData: { mimeType: "text/plain", fileUri: BOOK_FILE_URI } },
-            // 告诉 AI：这是你的人设和用户的具体问题
-            { text: SYSTEM_PROMPT + "\n\n用户的问题是：" + userContent }
-        ]);
-
-        const response = await result.response;
-        return response.text();
-
-    } catch (error) {
-        console.error("AI 算命失败:", error);
-
-        // Check for global rate limit (Quota exceeded) or Service Unavailable
-        const errStr = error.toString();
-        if (errStr.includes("429") || errStr.includes("503") || errStr.includes("quota")) {
-            return "【天机拥堵】当前求签人数过多，请稍候再试。";
+        // 3. 【错误反馈】处理 HTTP 错误状态
+        if (!response.ok) {
+            // 尝试读取后端返回的错误详情
+            let errorMsg = "连接异常";
+            try {
+                const errData = await response.json();
+                errorMsg = errData.error || response.statusText;
+            } catch (e) {
+                errorMsg = `HTTP Error ${response.status}`;
+            }
+            
+            // 抛出带有具体信息的错误
+            throw new Error(errorMsg);
         }
 
-        return "【系统干扰】信号连接失败，请检查网络或 Key 配置。";
+        // 4. 解析成功结果
+        const data = await response.json();
+        
+        // 5. 扣除次数（只有成功了才扣次数）
+        incrementUsage();
+        
+        return data.answer;
+
+    } catch (error) {
+        console.error("AI 请求失败详情:", error);
+
+        // 6. 【错误反馈】根据不同类型的错误返回不同的话术
+        const eMsg = error.message || "";
+
+        // 场景 A: Vercel 函数超时 (通常是 Vercel 的 10秒/60秒 限制)
+        if (eMsg.includes("504") || eMsg.includes("Task timed out")) {
+            return "【天机演算超时】问题过于深奥，服务器算力过载。\n请尝试简化您的问题。";
+        }
+        
+        // 场景 B: 后端明确返回了错误 (比如 API Key 挂了)
+        if (eMsg.includes("API key") || eMsg.includes("403")) {
+            return `【系统核心故障】密钥验证失败。\n(调试信息: ${eMsg})`;
+        }
+
+        // 场景 C: 网络断了
+        if (eMsg.includes("Failed to fetch") || eMsg.includes("Network")) {
+            return "【信号阻断】无法连接到赛博空间，请检查您的网络连接。";
+        }
+
+        // 场景 D: 其他未知错误
+        return `【系统干扰】遭遇未知异常，演算中断。\n错误代码：${eMsg.substring(0, 30)}...`;
     }
 }
