@@ -3,7 +3,8 @@ let isAIResponseMode = false; // 是否正在显示 AI 回复
 
 let disclaimerContent = [
     "本產品基於傳統周易哲學與現代隨機算法生成，僅供娛樂與心理療癒，不作為現實決策依據。",
-    "請相信科學，理性生活。"
+    "請相信科學，理性生活。",
+    "演算結果如過眼雲煙，閱後即焚。所有數據絕不留存，請君寬心。"
 ];
 
 let defaultContent = [
