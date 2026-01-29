@@ -5,8 +5,19 @@ let scrollbar = null;
 let thumb = null;
 
 const MAX_ROWS = 5;
-const LINE_HEIGHT = 24; // 16px * 1.5
-const PADDING_Y = 24; // 12px * 2
+
+const InputConfig = {
+    desktop: {
+        fontSize: '16px',
+        lineHeight: 24, // 16px * 1.5
+        paddingY: 24    // 12px * 2
+    },
+    mobile: {
+        fontSize: '16px',
+        lineHeight: 24,
+        paddingY: 24
+    }
+};
 
 export function initInputUI() {
     container = document.getElementById('input-ui-container');
@@ -30,6 +41,20 @@ export function initInputUI() {
     textarea.addEventListener('mousedown', stopProp);
     textarea.addEventListener('touchstart', stopProp);
     textarea.addEventListener('click', stopProp);
+
+    // 应用初始样式
+    applyStyles();
+}
+
+function applyStyles() {
+    if (!textarea) return;
+    const isMobile = window.innerWidth < 768;
+    const config = isMobile ? InputConfig.mobile : InputConfig.desktop;
+
+    textarea.style.fontSize = config.fontSize;
+    textarea.style.lineHeight = config.lineHeight + 'px';
+    textarea.style.paddingTop = (config.paddingY / 2) + 'px';
+    textarea.style.paddingBottom = (config.paddingY / 2) + 'px';
 }
 
 function adjustSize() {
@@ -47,8 +72,14 @@ function adjustSize() {
     }
 
     // 2. 纵向增长逻辑 (逐行)
-    const singleLineHeight = LINE_HEIGHT + PADDING_Y;
-    const maxHeight = LINE_HEIGHT * MAX_ROWS + PADDING_Y;
+    const isMobile = window.innerWidth < 768;
+    const config = isMobile ? InputConfig.mobile : InputConfig.desktop;
+
+    // 确保样式同步（以防窗口大小改变）
+    applyStyles();
+
+    const singleLineHeight = config.lineHeight + config.paddingY;
+    const maxHeight = config.lineHeight * MAX_ROWS + config.paddingY;
 
     // 获取真实的内容高度
     textarea.style.height = 'auto';

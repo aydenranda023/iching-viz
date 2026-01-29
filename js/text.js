@@ -20,6 +20,29 @@ let disclaimerIndex = 0;
 let isDisclaimerMode = true; // 初始为免责声明模式
 let currentTimeout = null;
 
+const TextConfig = {
+    desktop: {
+        disclaimer: {
+            fontSize: "14px",
+            fontFamily: "inherit"
+        },
+        normal: {
+            fontSize: "22px",
+            fontFamily: '"Garamond", "Georgia", "Times New Roman", "KaiTi", "STKaiti", serif'
+        }
+    },
+    mobile: {
+        disclaimer: {
+            fontSize: "14px",
+            fontFamily: "inherit"
+        },
+        normal: {
+            fontSize: "18px",
+            fontFamily: '"Garamond", "Georgia", "Times New Roman", "KaiTi", "STKaiti", serif'
+        }
+    }
+};
+
 export function initText(getColor) {
     textElement = document.getElementById('dynamic-text');
     startDefaultCycle(getColor);
@@ -39,21 +62,19 @@ async function startDefaultCycle(getColor) {
     let stayTime = 6000; // 默认停留 6 秒
     let fadeOutWait = 1600; // 默认淡出后等待 1.6 秒
 
+    const isMobile = window.innerWidth < 768;
+    const config = isMobile ? TextConfig.mobile : TextConfig.desktop;
+
     if (isDisclaimerMode) {
         // --- 免责声明模式 ---
         content = disclaimerContent[disclaimerIndex];
-        textElement.style.fontFamily = "inherit";
-
-        // [修改这里] 开头文字大小
-        textElement.style.fontSize = "14px";
+        textElement.style.fontFamily = config.disclaimer.fontFamily;
+        textElement.style.fontSize = config.disclaimer.fontSize;
     } else {
         // --- 正常轮播模式 ---
         content = defaultContent[defaultIndex];
-        // 正常文字切换为楷体 (中文) + Old Style Serifs (英文)
-        textElement.style.fontFamily = '"Garamond", "Georgia", "Times New Roman", "KaiTi", "STKaiti", serif';
-
-        // [修改这里] 普通文字大小
-        textElement.style.fontSize = "22px";
+        textElement.style.fontFamily = config.normal.fontFamily;
+        textElement.style.fontSize = config.normal.fontSize;
     }
 
     textElement.innerHTML = content;
@@ -117,6 +138,13 @@ export async function showAIResponse(fullText) {
 
     // 如果分割失败（比如全是英文没有标点），就当一段
     if (segments.length === 0 && fullText.trim()) segments.push(fullText);
+
+    const isMobile = window.innerWidth < 768;
+    const config = isMobile ? TextConfig.mobile : TextConfig.desktop;
+
+    // 确保使用正常模式的字体样式
+    textElement.style.fontFamily = config.normal.fontFamily;
+    textElement.style.fontSize = config.normal.fontSize;
 
     // 循环播放每一段
     for (let i = 0; i < segments.length; i++) {
