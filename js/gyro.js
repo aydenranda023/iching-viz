@@ -27,7 +27,7 @@ export function initGyro(particleSystem, baguaSystem) {
 
 function createPermissionButton() {
     const btn = document.createElement('button');
-    btn.innerText = "开启沉浸体验";
+    btn.innerText = "開啟沉浸體驗";
     btn.style.position = 'absolute';
     btn.style.bottom = '20px';
     btn.style.left = '50%';
@@ -48,7 +48,7 @@ function createPermissionButton() {
                     isGyroEnabled = true;
                     btn.style.display = 'none';
                 } else {
-                    alert('需要陀螺仪权限来启用视差效果');
+                    alert('需要陀螺儀權限來啟用視差效果');
                 }
             })
             .catch(console.error);

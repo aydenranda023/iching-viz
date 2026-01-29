@@ -103,7 +103,7 @@ export const vertexShader = `
         gl_Position = projectionMatrix * mvPosition;
 
         // 增大粒子尺寸，让它们重叠形成柔和感
-        gl_PointSize = (2.5) * (1.0 / -mvPosition.z);
+        gl_PointSize = (3.0) * (1.0 / -mvPosition.z);
         
         vNoise = noise;
         vDepth = -mvPosition.z; 

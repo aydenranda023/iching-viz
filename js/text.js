@@ -23,7 +23,7 @@ let currentTimeout = null;
 const TextConfig = {
     desktop: {
         disclaimer: {
-            fontSize: "14px",
+            fontSize: "16px",
             fontFamily: "inherit"
         },
         normal: {
