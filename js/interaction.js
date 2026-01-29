@@ -349,7 +349,11 @@ export function updateInteraction(time) {
     }
 
     // 3. Elastic Scaling (Parallax)
-    const baseDistance = 4.5;
+    // 动态调整基准距离：手机端初始距离通常是 9.0 (4.5 * 2)，桌面端是 4.5
+    // 必须与 main.js 中的 updateCameraPosition 逻辑保持一致
+    const isMobile = window.innerWidth < 768;
+    const baseDistance = isMobile ? 9.0 : 4.5;
+
     if (typeof window.currentSmoothedScale === 'undefined') window.currentSmoothedScale = 1.0;
 
     const currentDist = _camera.position.distanceTo(_controls.target);
