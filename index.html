@@ -191,10 +191,26 @@
             padding: 0 20px;
             /* 与 input-box 保持一致（虽然 padding 在 textarea 上有点复杂，这里主要测量纯文本） */
         }
+
+        /* --- 暗角效果 --- */
+        #vignette-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            /* 关键：不阻挡交互 */
+            z-index: 5;
+            /* 在 Canvas 之上，UI 之下 */
+            /* 径向渐变：中间透明，四周黑色半透明 */
+            background: radial-gradient(circle, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.4) 100%);
+        }
     </style>
 </head>
 
 <body>
+    <div id="vignette-overlay"></div>
     <div id="text-overlay">
         <div class="guide-text" id="dynamic-text">
             初始化模块...
