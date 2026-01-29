@@ -2,17 +2,17 @@ let textElement = null;
 let isAIResponseMode = false; // 是否正在显示 AI 回复
 
 let disclaimerContent = [
-    "本产品基于传统周易哲学与现代随机算法生成，仅供娱乐与心理疗愈，不作为现实决策依据。",
-    "请相信科学，理性生活。"
+    "本產品基於傳統周易哲學與現代隨機算法生成，僅供娛樂與心理療癒，不作為現實決策依據。",
+    "請相信科學，理性生活。"
 ];
 
 let defaultContent = [
-    "想象焦虑是一滴墨入水，被巨大的空白稀释、消解...",
-    "知其白，守其黑，为天下式。",
-    `<span class="hex-highlight">既济 · Completion</span>黑白咬合，阴阳归位。能量处于完美的平衡。`,
-    "在这一张巨大的灰色宣纸上，当下的困扰不过是一个噪点。",
+    "想像焦慮是一滴墨入水，被巨大的空白稀釋、消解...",
+    "知其白，守其黑，為天下式。",
+    `<span class="hex-highlight">既濟 · Completion</span>黑白咬合，陰陽歸位。能量處於完美的平衡。`,
+    "在這一張巨大的灰色宣紙上，當下的困擾不過是一個噪點。",
     `<span class="hex-highlight">屯 · Beginnings</span>混沌之中，秩序正在萌芽。`,
-    "万物负阴而抱阳，冲气以为和。"
+    "萬物負陰而抱陽，沖氣以為和。"
 ];
 
 let defaultIndex = 0;
@@ -176,7 +176,7 @@ export function showLoading() {
 
     setTimeout(() => {
         textElement.style.color = '#333';
-        textElement.innerHTML = "正在连接...<br>演算中...";
+        textElement.innerHTML = "感應天道...<br>推演天機...";
         textElement.classList.add('visible');
     }, 1000);
 }

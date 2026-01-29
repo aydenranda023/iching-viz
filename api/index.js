@@ -3,16 +3,16 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
 
-// Vercel 会自动从后台环境变量里读取 GOOGLE_API_KEY
+// Vercel 會自動從後台環境變數裡讀取 GOOGLE_API_KEY
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-// 允许 Vercel 处理最大 10 秒的请求
+// 允許 Vercel 處理最大 10 秒的請求
 export const config = {
   maxDuration: 10,
 };
 
 export default async function handler(req, res) {
-  // 1. 只允许 POST 请求
+  // 1. 只允許 POST 請求
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
@@ -20,64 +20,65 @@ export default async function handler(req, res) {
   try {
     const { question } = req.body;
 
-    // 2. 读取书籍内容
-    // process.cwd() 获取当前工作目录
+    // 2. 讀取書籍內容
+    // process.cwd() 獲取當前工作目錄
     const bookPath = path.join(process.cwd(), 'api', 'book.txt');
     let bookContent = "";
     try {
       bookContent = fs.readFileSync(bookPath, 'utf-8');
     } catch (err) {
-      console.error("读取书本失败:", err);
-      // 如果读不到，为了不崩，给个空字符串也行，或者抛错
-      return res.status(500).json({ error: "服务器内部错误：古籍丢失" });
+      console.error("讀取書本失敗:", err);
+      // 如果讀不到，為了不崩，給個空字串也行，或者拋錯
+      return res.status(500).json({ error: "伺服器內部錯誤：古籍丟失" });
     }
 
-    // 3. 准备模型 (使用 flash-lite 模型，省钱又快)
+    // 3. 準備模型 (使用 flash-lite 模型，省錢又快)
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
-    // 4. 提示词工程
+    // 4. 提示詞工程
     const prompt = `
-      【角色设定】
-      你是一位深谙《断易天机》与周易哲学的国学文化学者，也是一位温暖睿智的心灵疗愈师。你不再进行预知未来的“算命”，而是通过解读卦象中的哲学隐喻，为用户当下的困惑提供心理疏导和行动建议。
+      【角色設定】
+      你是一位深諳《斷易天機》與周易哲學的國學文化學者，也是一位溫暖睿智的心靈療癒師。你不再進行預知未來的「算命」，而是通過解讀卦象中的哲學隱喻，為用戶當下的困惑提供心理疏導和行動建議。
 
-      【回答原则】
-      1. 合规性重中之重：严禁出现“算命”、“吉凶预测”、“迷信”、“鬼神”、“血光之灾”等违规表述。将“吉/凶”转化为“顺境/挑战”、“机遇/磨砺”。
-      2. 依据原典：严格基于我提供的《断易天机》书籍内容提取卦象含义，不要编造。
-      3. 疗愈风格：语言需典雅、古朴、温暖。多用比喻，将卦象与自然意象（如山、水、风、雷）联系起来，引导用户向内关照。
-      4. 未知处理：如果书里没提到相关内容，请用“此卦意象深远，需待机缘自现”来委婉回答。
+      【回答原則】
+      1. 合規性重中之重：嚴禁出現「算命」、「吉凶預測」、「迷信」、「鬼神」、「血光之災」等違規表述。將「吉/凶」轉化為「順境/挑戰」、「機遇/磨礪」。
+      2. 依據原典：嚴格基於我提供的《斷易天機》書籍內容提取卦象含義，不要編造。
+      3. 療癒風格：語言需典雅、古樸、溫暖。多用比喻，將卦象與自然意象（如山、水、風、雷）聯繫起來，引導用戶向內關照。
+      4. 未知處理：如果書裡沒提到相關內容，請用「此卦意象深遠，需待機緣自現」來委婉回答。
 
       【格式要求】 (重要！)
-      1. **输出纯文本**：不要使用任何 Markdown 格式（如 **、#、- 等符号）。
-      2. **不要使用星号**：标题也不要加星号或加粗，直接换行即可。
-      3. **分段清晰**：段落之间用换行符分隔。
+      1. **輸出純文本**：不要使用任何 Markdown 格式（如 **、#、- 等符號）。
+      2. **不要使用星號**：標題也不要加星號或加粗，直接換行即可。
+      3. **分段清晰**：段落之間用換行符分隔。
+      4. **使用繁體中文**：請務必使用繁體中文（Traditional Chinese）回答所有內容。
 
-      【回答结构】
+      【回答結構】
       第一部分：卦象意境
-      （在这里用优美的古文或现代散文诗句描述该卦的画面感，例如：“如舟行江上，顺风而动...”）
+      （在這裡用優美的古文或現代散文詩句描述該卦的畫面感，例如：「如舟行江上，順風而動...」）
 
       第二部分：古籍新解
-      （在这里引用《断易天机》中的核心断语，但要用现代心理学或管理学视角进行翻译，例如将“官鬼”解释为“压力或责任”）
+      （在這裡引用《斷易天機》中的核心斷語，但要用現代心理學或管理學視角進行翻譯，例如將「官鬼」解釋為「壓力或責任」）
 
-      第三部分：当下指引
-      （在这里针对用户的问题，给出一个温暖、务实的建议，侧重于心态调整和修身养性）
+      第三部分：當下指引
+      （在這裡針對用戶的問題，給出一個溫暖、務實的建議，側重於心態調整和修身養性）
       
-      ---书籍内容开始---
+      ---書籍內容開始---
       ${bookContent.substring(0, 800000)} 
-      ---书籍内容结束---
+      ---書籍內容結束---
 
-      用户的问题是：${question}
+      用戶的問題是：${question}
     `;
 
-    // 5. 发送给 Google
+    // 5. 發送給 Google
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
 
-    // 6. 返回结果
+    // 6. 返回結果
     return res.status(200).json({ answer: text });
 
   } catch (error) {
-    console.error("后端报错:", error);
-    return res.status(500).json({ error: "天机演算失败，服务器连接不稳定" });
+    console.error("後端報錯:", error);
+    return res.status(500).json({ error: "天機演算失敗，伺服器連接不穩定" });
   }
 }
