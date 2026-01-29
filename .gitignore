@@ -3,6 +3,8 @@ node_modules/
 
 # 忽略本地的环境变量文件（绝对不能传 Key！）
 .env
+.env.local
+.env.*.local
 
 # 忽略 Vercel 的本地缓存
 .vercel
