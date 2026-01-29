@@ -37,7 +37,7 @@ const TextConfig = {
             fontFamily: "inherit"
         },
         normal: {
-            fontSize: "18px",
+            fontSize: "16px",
             fontFamily: '"Garamond", "Georgia", "Times New Roman", "KaiTi", "STKaiti", serif'
         }
     }
