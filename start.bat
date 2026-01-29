@@ -1,9 +1,6 @@
 @echo off
-echo Starting local server...
-echo Please ensure you have Node.js installed.
-call npx -y http-server . -o -c-1
-if %errorlevel% neq 0 (
-    echo.
-    echo Error: Failed to start server. Please check if Node.js is installed.
-    pause
-)
+echo Starting local Vercel server...
+echo Ensure you have installed Vercel CLI: npm i -g vercel
+echo.
+call vercel dev
+pause

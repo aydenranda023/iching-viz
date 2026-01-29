@@ -198,7 +198,11 @@ export function updateBagua(time) {
 export function resizeBagua(aspect) {
     if (!baguaGroup) return;
     const baseScale = 1.5;
-    const targetScale = aspect < 1 ? baseScale * 0.55 : baseScale;
+    // 增加对屏幕宽度的判断：如果是小屏幕（手机），强制使用小比例，
+    // 防止键盘弹出导致高度变小、aspect 变大 (>1) 从而误判为桌面模式
+    const isSmallScreen = window.innerWidth < 768;
+    const targetScale = (aspect < 1 || isSmallScreen) ? baseScale * 0.55 : baseScale;
+
     baguaGroup.scale.set(targetScale, targetScale, targetScale);
     baguaGroup.userData.baseScale = targetScale;
 }

@@ -1,12 +1,12 @@
 // api/index.js
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const fs = require('fs');
-const path = require('path');
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import fs from 'fs';
+import path from 'path';
 
 // Vercel 会自动从后台环境变量里读取 GOOGLE_API_KEY
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-// 允许 Vercel 处理最大 10 秒的请求 (Serverless Function 限制)
+// 允许 Vercel 处理最大 10 秒的请求
 export const config = {
   maxDuration: 10,
 };
@@ -21,22 +21,23 @@ export default async function handler(req, res) {
     const { question } = req.body;
 
     // 2. 读取书籍内容
-    // 在 Vercel 环境中，process.cwd() 是项目根目录
+    // process.cwd() 获取当前工作目录
     const bookPath = path.join(process.cwd(), 'api', 'book.txt');
     let bookContent = "";
     try {
       bookContent = fs.readFileSync(bookPath, 'utf-8');
     } catch (err) {
       console.error("读取书本失败:", err);
+      // 如果读不到，为了不崩，给个空字符串也行，或者抛错
       return res.status(500).json({ error: "服务器内部错误：古籍丢失" });
     }
 
-    // 3. 准备模型 (使用 flash 模型，速度快)
+    // 3. 准备模型 (使用 flash-lite 模型，省钱又快)
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // 4. 提示词工程
     const prompt = `
-      【【角色设定】
+      【角色设定】
       你是一位深谙《断易天机》与周易哲学的国学文化学者，也是一位温暖睿智的心灵疗愈师。你不再进行预知未来的“算命”，而是通过解读卦象中的哲学隐喻，为用户当下的困惑提供心理疏导和行动建议。
 
       【回答原则】
