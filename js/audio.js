@@ -76,17 +76,20 @@ export function initAudio() {
                 audio.play().then(() => {
                     updateIcon();
                     console.log("Audio unlocked by user interaction.");
-                }).catch(e => console.error("Unlock failed:", e));
-
-                // Clean up listeners immediately
-                ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach(evt => {
-                    document.removeEventListener(evt, enableAudio, { capture: true });
+                    // Only remove listeners if playback succeeded
+                    ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach(evt => {
+                        document.removeEventListener(evt, enableAudio, { capture: true });
+                    });
+                }).catch(e => {
+                    console.error("Unlock failed (will retry on next interaction):", e);
+                    // Do NOT remove listeners here, let them trigger again
                 });
             };
 
             // Use capture: true to intercept events before other handlers
+            // Removed 'once: true' so we can retry if needed
             ['click', 'touchstart', 'touchend', 'pointerdown', 'keydown'].forEach(evt => {
-                document.addEventListener(evt, enableAudio, { capture: true, once: true });
+                document.addEventListener(evt, enableAudio, { capture: true });
             });
         });
     }
