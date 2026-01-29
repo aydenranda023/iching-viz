@@ -88,7 +88,7 @@ function updateCameraPosition(isInit = false) {
     camera.aspect = effectiveAspect;
     camera.updateProjectionMatrix();
 }
-updateCameraPosition(true);
+
 
 // --- 2. 加载模块 ---
 const particleSystem = createParticles();
@@ -131,6 +131,8 @@ preloadModels().then(() => {
 const baguaSystem = createBagua();
 camera.add(baguaSystem);
 scene.add(camera);
+
+updateCameraPosition(true);
 
 const clock = new THREE.Clock();
 

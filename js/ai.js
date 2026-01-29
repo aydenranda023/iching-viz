@@ -10,7 +10,7 @@ const STORAGE_KEY_COUNT = 'oracle_usage_count';
 function checkDailyLimit() {
     const today = new Date().toDateString(); // 获取今天的日期字符串 (e.g., "Tue Jan 27 2026")
     const lastDate = localStorage.getItem(STORAGE_KEY_DATE);
-    
+
     // 如果日期变了，重置计数器
     if (lastDate !== today) {
         localStorage.setItem(STORAGE_KEY_DATE, today);
@@ -43,7 +43,7 @@ export async function askOracle(userContent) {
 
     try {
         console.log("正在连接后端 API...");
-        
+
         // 2. 发送请求给 Vercel 后端
         const response = await fetch('/api/index', {
             method: 'POST',
@@ -63,17 +63,17 @@ export async function askOracle(userContent) {
             } catch (e) {
                 errorMsg = `HTTP Error ${response.status}`;
             }
-            
+
             // 抛出带有具体信息的错误
             throw new Error(errorMsg);
         }
 
         // 4. 解析成功结果
         const data = await response.json();
-        
+
         // 5. 扣除次数（只有成功了才扣次数）
         incrementUsage();
-        
+
         return data.answer;
 
     } catch (error) {
@@ -86,7 +86,7 @@ export async function askOracle(userContent) {
         if (eMsg.includes("504") || eMsg.includes("Task timed out")) {
             return "【天机演算超时】问题过于深奥，服务器算力过载。\n请尝试简化您的问题。";
         }
-        
+
         // 场景 B: 后端明确返回了错误 (比如 API Key 挂了)
         if (eMsg.includes("API key") || eMsg.includes("403")) {
             return `【系统核心故障】密钥验证失败。\n(调试信息: ${eMsg})`;
