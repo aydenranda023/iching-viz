@@ -61,12 +61,20 @@ function adjustSize() {
     if (!textarea || !measure) return;
 
     // 1. 横向增长逻辑
-    measure.textContent = textarea.value || textarea.placeholder;
-    const textWidth = measure.offsetWidth + 40; // 加上 padding 补偿
+    // 先计算 Placeholder 的宽度作为最小宽度
+    measure.textContent = textarea.placeholder;
+    const minWidth = measure.offsetWidth + 40; // padding 补偿
+
+    // 再计算当前内容的宽度
+    measure.textContent = textarea.value;
+    const currentTextWidth = measure.offsetWidth + 40;
+
+    // 最终宽度取二者最大值，但不能超过最大限制
+    const finalWidth = Math.max(minWidth, currentTextWidth);
     const maxWidth = window.innerWidth * 0.666;
 
-    if (textWidth < maxWidth) {
-        textarea.style.width = textWidth + 'px';
+    if (finalWidth < maxWidth) {
+        textarea.style.width = finalWidth + 'px';
     } else {
         textarea.style.width = maxWidth + 'px';
     }

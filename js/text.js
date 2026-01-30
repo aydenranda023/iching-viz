@@ -8,13 +8,34 @@ let disclaimerContent = [
 ];
 
 let defaultContent = [
-    "想像焦慮是一滴墨入水，被巨大的空白稀釋、消解...",
-    "知其白，守其黑，為天下式。",
-    `<span class="hex-highlight">既濟 · Completion</span>黑白咬合，陰陽歸位。能量處於完美的平衡。`,
+    `<span class="hex-highlight">乾 · The Creative</span>天行健，君子以自強不息。生生不息的能量，是創造萬物的源頭。`,
+    `<span class="hex-highlight">坤 · The Receptive</span>地勢坤，君子以厚德載物。包容一切變數，方能承載無限可能。`,
+    `<span class="hex-highlight">屯 · Beginnings</span>混沌之中，秩序正在萌芽。萬事開頭難，但生機就在其中。`,
+    `<span class="hex-highlight">既濟 · Completion</span>黑白咬合，陰陽歸位。能量處於完美的平衡，但也需防微杜漸。`,
+    `<span class="hex-highlight">未濟 · Before Completion</span>火水未濟。結束是另一種開始，不完美才是生生不息的動力。`,
+    `<span class="hex-highlight">泰 · Peace</span>天地交而萬物通。當下的阻滯消散，溝通與流動將帶來轉機。`,
+    `<span class="hex-highlight">復 · Return</span>雷在地中。寒冬已過，微弱的生機正在地底震動，靜候春雷。`,
+    `<span class="hex-highlight">鼎 · The Cauldron</span>革故鼎新。舊的形態正在熔化，新的秩序即將鑄成，此乃煉化之象。`,
+
+    // 视觉隐喻
     "在這一張巨大的灰色宣紙上，當下的困擾不過是一個噪點。",
-    `<span class="hex-highlight">屯 · Beginnings</span>混沌之中，秩序正在萌芽。`,
-    "萬物負陰而抱陽，沖氣以為和。"
+    "每一顆游離的粒子，都是一次未被定義的呼吸。",
+    "聚散終有時。此刻的紛亂，不過是下一場重組的前奏。",
+
+    // 道家心法
+    "知其白，守其黑，為天下式。",
+    "萬物負陰而抱陽，沖氣以為和。",
+    "致虛極，守靜篤。萬物並作，吾以觀復。",
+    "上善若水。水善利萬物而不爭，處眾人之所惡，故幾於道。",
+
+    // 療癒指引
+    "流水不爭先，爭的是滔滔不絕。",
+    "飄風不終朝，驟雨不終日。困境不會是永恆的狀態。",
+    "亂麻亦是經緯。給時間一點時間，讓線條自己找到歸處。",
+    "虛空並非一無所有，它包含了萬物生成的可能。"
 ];
+
+let introContent = "想像焦慮是一滴墨入水，被巨大的空白稀釋、消解...";
 
 let defaultIndex = 0;
 let disclaimerIndex = 0;
@@ -49,9 +70,32 @@ export function initText(getColor) {
     startDefaultCycle(getColor);
 }
 
+// --- 闲置提示逻辑 ---
+let lastInteractionTime = Date.now();
+// let hasShownIdleHint = false; // 已废弃，改用时间间隔控制
+let lastHintTime = 0; // 上次显示提示的时间
+let forceHintNext = false; // 强制下一次显示提示（用于免责声明后）
+let gestureHintElement = null; // 手势提示元素
+
+// 随机播放控制
+let recentIndices = []; // 最近播放过的索引
+let showIntroNext = false; // 是否在下次正常播放时显示引导语
+
+export function notifyInteraction() {
+    lastInteractionTime = Date.now();
+    // hasShownIdleHint = false; 
+
+    // 立即隐藏手势提示
+    if (!gestureHintElement) gestureHintElement = document.getElementById('gesture-hint');
+    if (gestureHintElement) gestureHintElement.classList.remove('visible');
+}
+
 // 播放默认轮播
 async function startDefaultCycle(getColor) {
     if (isAIResponseMode) return;
+
+    // 初始化元素引用
+    if (!gestureHintElement) gestureHintElement = document.getElementById('gesture-hint');
 
     // 0. 设置颜色
     if (getColor && textElement) {
@@ -62,20 +106,59 @@ async function startDefaultCycle(getColor) {
     let content = "";
     let stayTime = 6000; // 默认停留 6 秒
     let fadeOutWait = 1600; // 默认淡出后等待 1.6 秒
+    let didShowHint = false; // 本次是否显示了提示
 
     const isMobile = window.innerWidth < 768;
     const config = isMobile ? TextConfig.mobile : TextConfig.desktop;
 
-    if (isDisclaimerMode) {
-        // --- 免责声明模式 ---
-        content = disclaimerContent[disclaimerIndex];
-        textElement.style.fontFamily = config.disclaimer.fontFamily;
-        textElement.style.fontSize = config.disclaimer.fontSize;
-    } else {
-        // --- 正常轮播模式 ---
-        content = defaultContent[defaultIndex];
+    // --- 闲置检测 ---
+    const now = Date.now();
+    const idleTime = now - lastInteractionTime;
+    const isIdle = idleTime > 30000; // 30秒
+    const timeSinceHint = now - lastHintTime;
+
+    // 判定是否显示提示：
+    // 1. 非免责声明模式
+    // 2. 强制显示（刚播完免责声明） 或 （闲置已久 且 距离上次提示超过30秒）
+    let shouldShowHint = !isDisclaimerMode && (forceHintNext || (isIdle && timeSinceHint > 60000));
+
+    if (shouldShowHint) {
+        content = "潛入虛空幻境，書寫心中所惑。";
         textElement.style.fontFamily = config.normal.fontFamily;
         textElement.style.fontSize = config.normal.fontSize;
+
+        didShowHint = true;
+        lastHintTime = now;
+        forceHintNext = false; // 消耗掉强制标志
+
+        // --- 增强：显示手势提示 ---
+        stayTime = 10000; // 延长到 10 秒
+        if (!gestureHintElement) gestureHintElement = document.getElementById('gesture-hint');
+        if (gestureHintElement) gestureHintElement.classList.add('visible');
+
+    } else {
+        // --- 正常逻辑：确保手势提示关闭 ---
+        if (gestureHintElement) gestureHintElement.classList.remove('visible');
+
+        if (isDisclaimerMode) {
+            // --- 免责声明模式 ---
+            content = disclaimerContent[disclaimerIndex];
+            textElement.style.fontFamily = config.disclaimer.fontFamily;
+            textElement.style.fontSize = config.disclaimer.fontSize;
+        } else {
+            // --- 正常轮播模式 ---
+            // 优先插播引导语
+            if (showIntroNext) {
+                content = introContent;
+                textElement.style.fontFamily = config.normal.fontFamily;
+                textElement.style.fontSize = config.normal.fontSize;
+                showIntroNext = false; // 消耗掉引导语标志
+            } else {
+                content = defaultContent[defaultIndex];
+                textElement.style.fontFamily = config.normal.fontFamily;
+                textElement.style.fontSize = config.normal.fontSize;
+            }
+        }
     }
 
     textElement.innerHTML = content;
@@ -87,6 +170,8 @@ async function startDefaultCycle(getColor) {
     currentTimeout = setTimeout(() => {
         // 4. 淡出
         textElement.classList.remove('visible');
+        // 也要淡出手势提示 (如果存在)
+        if (gestureHintElement) gestureHintElement.classList.remove('visible');
 
         // 特殊逻辑：如果是免责声明的最后一句，淡出后要等待更久
         if (isDisclaimerMode && disclaimerIndex === disclaimerContent.length - 1) {
@@ -101,9 +186,33 @@ async function startDefaultCycle(getColor) {
                     // 免责声明播放完毕，切换到正常模式
                     isDisclaimerMode = false;
                     defaultIndex = 0;
+                    forceHintNext = true; // 关键：免责声明结束后，立刻强制显示一次提示
+                    // 重置随机逻辑状态
+                    showIntroNext = true; // 必须紧接着显示引导语
+                    recentIndices = [];
                 }
             } else {
-                defaultIndex = (defaultIndex + 1) % defaultContent.length;
+                // 如果刚刚显示的是闲置提示，就不增加 defaultIndex
+                // 如果显示的是正常内容，则切换下一句
+                if (!didShowHint) {
+                    // 随机逻辑
+                    // 随机选择，但也需避免重复最近的
+                    let newIndex;
+                    let attempts = 0;
+                    do {
+                        newIndex = Math.floor(Math.random() * defaultContent.length);
+                        attempts++;
+                    } while (
+                        (recentIndices.includes(newIndex) || newIndex === defaultIndex) &&
+                        attempts < 20 // 防止死循环
+                    );
+                    defaultIndex = newIndex;
+
+
+                    // 记录最近播放的索引 (保留2个)
+                    recentIndices.push(defaultIndex);
+                    if (recentIndices.length > 2) recentIndices.shift();
+                }
             }
             startDefaultCycle(getColor); // 递归调用
         }, fadeOutWait);
@@ -250,31 +359,37 @@ export async function showLoading() {
     if (currentTimeout) clearTimeout(currentTimeout);
     textElement.classList.remove('visible');
 
+    // 0. 设置每一句的字体样式 (与正文一致)
+    const isMobile = window.innerWidth < 768;
+    const config = isMobile ? TextConfig.mobile : TextConfig.desktop;
+    textElement.style.fontFamily = config.normal.fontFamily;
+    textElement.style.fontSize = config.normal.fontSize;
+    textElement.style.color = '#333';
+
     // 等待上一句淡出
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1600));
 
     // 1. 第一句：感应天道
-    textElement.style.color = '#333';
     textElement.innerHTML = "感應天道...";
     textElement.classList.add('visible');
 
-    // 显示 2 秒
-    await new Promise(r => setTimeout(r, 2000));
+    // 显示 3 秒
+    await new Promise(r => setTimeout(r, 3000));
     textElement.classList.remove('visible');
 
-    // 淡出等待 1 秒
-    await new Promise(r => setTimeout(r, 1000));
+    // 淡出等待 1.6 秒
+    await new Promise(r => setTimeout(r, 1600));
 
     // 2. 第二句：推演天机
     textElement.innerHTML = "推演天機...";
     textElement.classList.add('visible');
 
-    // 显示 2 秒
-    await new Promise(r => setTimeout(r, 2000));
+    // 显示 3 秒
+    await new Promise(r => setTimeout(r, 3000));
     textElement.classList.remove('visible');
 
-    // 淡出等待 1 秒
-    await new Promise(r => setTimeout(r, 1000));
+    // 淡出等待 1.6 秒
+    await new Promise(r => setTimeout(r, 1600));
 
     // 3. 加载动画结束，解锁
     isLoadingSequenceActive = false;

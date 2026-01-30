@@ -12,7 +12,7 @@ import { initAudio } from './audio.js';
 import { initInputUI, updateInputUI } from './inputUI.js';
 import { askOracle } from './ai.js';
 import { getInputContent, resetInputUI } from './inputUI.js'; // 导入新接口
-import { appendAIResponse, finishAIResponse, showLoading, initText } from './text.js'; // 导入新接口
+import { appendAIResponse, finishAIResponse, showLoading, initText, notifyInteraction } from './text.js'; // 导入新接口
 
 initAudio();
 
@@ -192,6 +192,15 @@ function animate() {
 
     const cameraDist = camera.position.distanceTo(controls.target);
     updateInputUI(cameraDist);
+
+    // --- 闲置检测更新 ---
+    // 如果镜头拉近了 (< 1.5)，或者输入框里有字，就视为"忙碌"/"交互中"，重置计时器
+    // 注意：这里我们用 1.5 比 0.9 稍微宽裕一点，只要开始拉近就算
+    const content = getInputContent();
+    if (cameraDist < 1.5 || (content && content.trim().length > 0)) {
+        notifyInteraction();
+    } else {
+    }
 
     const slowCycle = Math.sin(time * 0.15) * 0.5 + 0.5;
     const bgLerpFactor = 1 - slowCycle;

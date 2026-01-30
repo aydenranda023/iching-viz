@@ -25,39 +25,129 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 80%;
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
             pointer-events: none;
-            z-index: 10;
+            /* 透传点击 */
         }
 
-        /* 沿用 index.html 的深灰文字风格 */
-        .guide-text {
-            font-family: "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-            color: #333333;
-            font-size: 18px;
-            line-height: 1.6;
-            font-weight: 400;
-            letter-spacing: 1px;
-            letter-spacing: 1px;
+        #dynamic-text {
+            color: #333;
+            font-size: 24px;
+            font-family: "Garamond", "Georgia", "Times New Roman", serif;
+            text-align: center;
             opacity: 0;
             transition: opacity 1.5s ease-in-out;
-            /* 使用 transition 代替 animation */
-            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            max-width: 80%;
+            line-height: 1.6;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            /* 增加一点发光，防止背景太乱看不清 */
         }
 
-        .guide-text.visible {
+        #dynamic-text.visible {
             opacity: 1;
         }
 
         .hex-highlight {
             display: block;
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 600;
             margin-bottom: 15px;
             color: inherit;
             /* 允许继承父元素的文字颜色以实现同步变色 */
             letter-spacing: 4px;
+        }
+
+        /* 手势提示容器 */
+        #gesture-hint {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        #gesture-hint.visible {
+            opacity: 1;
+        }
+
+        /* 箭头通用样式 */
+        .hint-arrow {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-top: 2px solid rgba(255, 255, 255, 0.6);
+            border-right: 2px solid rgba(255, 255, 255, 0.6);
+            top: 50%;
+            left: 50%;
+            /* 关键修復：居中自身的锚点 */
+            margin-top: -20px;
+            margin-left: -20px;
+            opacity: 0;
+        }
+
+        /* 右上箭头 */
+        .arrow-tr {
+            transform: translate(100px, -100px) rotate(0deg);
+            /* 初始位置加大距离 */
+            animation: move-tr 2s infinite ease-out;
+        }
+
+        /* 左下箭头 */
+        .arrow-bl {
+            transform: translate(-100px, 100px) rotate(-180deg);
+            /* 初始位置加大距离 */
+            animation: move-bl 2s infinite ease-out;
+        }
+
+        @keyframes move-tr {
+            0% {
+                transform: translate(100px, -100px) rotate(0deg);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(160px, -160px) rotate(0deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes move-bl {
+            0% {
+                transform: translate(-100px, 100px) rotate(-180deg);
+                opacity: 0;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-160px, 160px) rotate(-180deg);
+                opacity: 0;
+            }
+        }
+
+        /* 移动端调整 */
+        @media (max-width: 768px) {
+            .loading-text {
+                font-size: 1.2rem;
+            }
+
+            #dynamic-text {
+                font-size: 18px;
+            }
         }
 
         /* @keyframes fadeCycle removed as we control it via JS now */
@@ -218,6 +308,12 @@
         <div class="guide-text" id="dynamic-text">
             初始化模块...
         </div>
+    </div>
+
+    <!-- 手势提示容器 -->
+    <div id="gesture-hint">
+        <div class="hint-arrow arrow-tr"></div>
+        <div class="hint-arrow arrow-bl"></div>
     </div>
 
     <!-- 新增输入框容器 -->
