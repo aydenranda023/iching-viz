@@ -6,9 +6,9 @@ import path from 'path';
 // Vercel 會自動從後台環境變數裡讀取 GOOGLE_API_KEY
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-// 允許 Vercel 處理最大 10 秒的請求
+// 允許 Vercel 處理最大 60 秒的請求
 export const config = {
-  maxDuration: 10,
+  maxDuration: 60,
 };
 
 export default async function handler(req, res) {
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       （在這裡針對用戶的問題，給出一個溫暖、務實的建議，側重於心態調整和修身養性）
       
       ---書籍內容開始---
-      ${bookContent.substring(0, 800000)} 
+      ${bookContent.substring(0, 150000)} 
       ---書籍內容結束---
 
       用戶的問題是：${question}
