@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     }
 
     // 3. 準備模型 (使用 flash-lite 模型，省錢又快)
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // 4. 提示詞工程
     const prompt = `
