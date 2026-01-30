@@ -12,7 +12,7 @@ import { initAudio } from './audio.js';
 import { initInputUI, updateInputUI } from './inputUI.js';
 import { askOracle } from './ai.js';
 import { getInputContent, resetInputUI } from './inputUI.js'; // 导入新接口
-import { appendAIResponse, finishAIResponse, showLoading } from './text.js'; // 导入新接口
+import { appendAIResponse, finishAIResponse, showLoading, initText } from './text.js'; // 导入新接口
 
 initAudio();
 
