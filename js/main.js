@@ -71,6 +71,12 @@ function updateCameraPosition(isInit = false) {
         if (!isKeyboardOpen) isKeyboardOpen = true;
     } else if (isKeyboardOpen && (!heightReduced || !widthUnchanged)) {
         isKeyboardOpen = false;
+        // 关键修复：检测到键盘收起（屏幕高度恢复）时，强制 input 失焦
+        // 防止下次点击 canvas 时因 preventDefault 导致软键盘再次弹出
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'INPUT')) {
+            activeEl.blur();
+        }
     }
 
     const effectiveWidth = currentWidth;
@@ -218,18 +224,33 @@ animate();
 // --- 4. 事件监听 ---
 let resizeTimeout;
 window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(() => {
-        // 只有当尺寸变化超过阈值（防抖动），或者单纯为了响应旋转后的最终尺寸
-        // 这里主要逻辑是：旋转后宽高互换，通过延时确保获取到的是最终稳定的 innerWidth/Height
-        if (Math.abs(window.innerWidth - initialWindowWidth) > 50 || Math.abs(window.innerHeight - initialWindowHeight) > 50) {
+    // 监听 resize 事件
+    // 1. 如果宽度发生显著变化 (>50px)，通常是设备旋转 -> 需要防抖等待旋转动画完成
+    // 2. 如果宽度没变，只是高度变化，通常是软键盘弹出/收起 -> 不需要防抖，立即响应以避免 UI 延迟
+
+    if (Math.abs(window.innerWidth - initialWindowWidth) > 50) {
+        // --- 旋转/宽度改变：防抖模式 ---
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            // 只有当尺寸变化超过阈值（防抖动），或者单纯为了响应旋转后的最终尺寸
+            // 这里主要逻辑是：旋转后宽高互换，通过延时确保获取到的是最终稳定的 innerWidth/Height
+
+            // 更新基准尺寸
             initialWindowWidth = window.innerWidth;
             initialWindowHeight = window.innerHeight;
+
+            // 旋转后，通常认为键盘状态也要重置（或者旋转会导致键盘收起）
             isKeyboardOpen = false;
             document.body.classList.remove('keyboard-active');
-        }
+
+            updateCameraPosition(false);
+        }, 500); // 500ms 防抖，等待旋转动画结束
+    } else {
+        // --- 仅高度改变 (软键盘/地址栏)：立即响应 ---
+        // 不更新 initialWindowWidth/Height，以保持键盘检测的基准
+        clearTimeout(resizeTimeout); // 如果有挂起的旋转防抖，优先响应这次即时更新
         updateCameraPosition(false);
-    }, 500); // 500ms 防抖，等待旋转动画结束
+    }
 });
 
 if (window.visualViewport) {
