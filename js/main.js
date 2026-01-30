@@ -12,7 +12,7 @@ import { initAudio } from './audio.js';
 import { initInputUI, updateInputUI } from './inputUI.js';
 import { askOracle } from './ai.js';
 import { getInputContent, resetInputUI } from './inputUI.js'; // 导入新接口
-import { initText, showAIResponse, showLoading } from './text.js'; // 导入新接口
+import { appendAIResponse, finishAIResponse, showLoading } from './text.js'; // 导入新接口
 
 initAudio();
 
@@ -33,6 +33,7 @@ document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.025;
+controls.zoomSpeed = 1.5; // 设置手机端缩放速率 (默认 1.0)
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.15;
 
@@ -163,11 +164,15 @@ initInteraction(scene, camera, renderer, controls, baguaSystem,
             resetInputUI(); // 清空并收起输入框
             showLoading();  // 显示"正在连接..."
 
-            // 2. 发送请求
-            const answer = await askOracle(content);
+            // 2. 发送请求 (流式)
+            // 传入 onChunk 回调，将数据片传给 text.js 的缓冲器
+            await askOracle(content, (chunk) => {
+                appendAIResponse(chunk);
+            });
 
-            // 3. 显示结果 (一段一段)
-            showAIResponse(answer);
+            // 3. 结束通知
+            // 当 askOracle await 结束时，说明流已关闭
+            finishAIResponse();
         } else {
             console.log("转动了八卦，但没有输入内容，忽略。");
         }

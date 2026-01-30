@@ -111,62 +111,130 @@ async function startDefaultCycle(getColor) {
     }, stayTime);
 }
 
-// --- 新增：显示 AI 回复 (一段一段显示) ---
-export async function showAIResponse(fullText) {
-    isAIResponseMode = true;
+// --- 流式新增：流式緩衝區和顯示隊列 ---
+let streamBuffer = "";
+let displayQueue = [];
+let isDisplayLoopRunning = false;
 
-    // 清除当前的轮播定时器
-    if (currentTimeout) clearTimeout(currentTimeout);
+// 接收來自後端的流式片段
+export function appendAIResponse(chunk) {
+    if (!chunk) return;
 
-    // 立即淡出当前文字
-    textElement.classList.remove('visible');
+    // 1. 如果是第一次接收（隊列空且緩衝空且未運行），切換狀態
+    if (!isAIResponseMode) {
+        isAIResponseMode = true;
+        if (currentTimeout) clearTimeout(currentTimeout);
+        textElement.classList.remove('visible');
+    }
 
-    // 等待淡出
-    await new Promise(r => setTimeout(r, 1000));
+    // 2. 追加到緩衝區
+    streamBuffer += chunk;
 
-    // 预处理文字：按句号、感叹号、换行符分割，但保留标点
-    // 过滤空行
-    const segments = fullText
-        .split(/([。！？\n]+)/)
-        .reduce((acc, curr, i) => {
-            if (i % 2 === 0) {
-                if (curr.trim()) acc.push(curr);
-            } else {
-                if (acc.length > 0) acc[acc.length - 1] += curr;
-            }
-            return acc;
-        }, []);
+    // 3. 嘗試提取完整句子
+    // 正則：匹配 句號、問號、感嘆號、換行符。保留分隔符。
+    // split技巧：使用捕獲組 () 會保留分隔符在結果數組中
+    const segments = streamBuffer.split(/([。！？\n]+)/);
 
-    // 如果分割失败（比如全是英文没有标点），就当一段
-    if (segments.length === 0 && fullText.trim()) segments.push(fullText);
+    // 如果 segments 長度大於 1，說明至少找到了一個分隔符
+    // 注意：最後一項通常是剩餘的不完整片段，或者空字符串（如果剛好以分隔符結尾）
+
+    // 清空緩衝區，重新構建
+    streamBuffer = "";
+
+    for (let i = 0; i < segments.length - 1; i += 2) {
+        const sentence = segments[i]; // 句子內容
+        const punctuation = segments[i + 1]; // 標點
+
+        if (sentence.trim() || punctuation.trim()) {
+            // 加入隊列
+            displayQueue.push(sentence + punctuation);
+        }
+    }
+
+    // 將剩下的部分放回緩衝區
+    streamBuffer = segments[segments.length - 1];
+
+    // 4. 嘗試啟動顯示循環
+    if (!isDisplayLoopRunning) {
+        processDisplayQueue();
+    }
+}
+
+// 處理顯示隊列
+async function processDisplayQueue() {
+    if (displayQueue.length === 0) {
+        // 如果隊列空了，但緩衝區還有剩（比如最後一句沒有標點，或者流結束了）
+        // 這裡需要外部通知流是否結束，暫時我們先假設只要隊列空了就等待
+        // 簡單優化：如果隊列空了，且流已經結束（這裡沒傳入標誌，暫且不處理，等待下一次 chunk 觸發）
+
+        // 如果隊列空了，檢查緩衝區是否有殘留（且長時間沒更新？），這裡簡化：暫停循環
+        isDisplayLoopRunning = false;
+
+        // 【兜底邏輯】如果緩衝區裡有東西，且確實很長時間沒新數據了（流結束），應該怎麼辦？
+        // 由於 appendAIResponse 無法知道流何時結束，我們通常需要一個 finishAIResponse 接口
+        return;
+    }
+
+    isDisplayLoopRunning = true;
+    const currentSegment = displayQueue.shift(); // 取出第一句
 
     const isMobile = window.innerWidth < 768;
     const config = isMobile ? TextConfig.mobile : TextConfig.desktop;
 
-    // 确保使用正常模式的字体样式
     textElement.style.fontFamily = config.normal.fontFamily;
     textElement.style.fontSize = config.normal.fontSize;
+    textElement.style.color = '#333';
 
-    // 循环播放每一段
-    for (let i = 0; i < segments.length; i++) {
-        // 设置为黑色或深色，确保 AI 回复清晰可见（或者你可以传入 getColor）
-        textElement.style.color = '#333';
-        textElement.innerHTML = segments[i];
+    textElement.innerHTML = currentSegment;
+    textElement.classList.add('visible');
 
-        textElement.classList.add('visible');
+    // 計算閱讀時間
+    // 基礎 2.5秒 + 每字 0.1秒
+    // 比全量模式稍微快一點，因為流式通常是一句句來，節奏緊湊
+    const readTime = 2500 + currentSegment.length * 100;
 
-        // 阅读时间根据字数动态调整 (基础 3秒 + 每字 0.1秒)
-        const readTime = 3000 + segments[i].length * 100;
-        await new Promise(r => setTimeout(r, readTime));
+    await new Promise(r => setTimeout(r, readTime));
 
-        textElement.classList.remove('visible');
-        await new Promise(r => setTimeout(r, 1500));
+    textElement.classList.remove('visible');
+
+    // 淡出間隔
+    await new Promise(r => setTimeout(r, 800));
+
+    // 遞歸處理下一句
+    processDisplayQueue();
+}
+
+// 通知的接口：流結束了，把最後剩下的緩衝區也顯示出來
+export function finishAIResponse() {
+    if (streamBuffer.trim()) {
+        displayQueue.push(streamBuffer);
+        streamBuffer = "";
     }
 
-    // 播放完毕，恢复默认轮播
-    isAIResponseMode = false;
-    defaultIndex = 0; // 重置轮播
-    startDefaultCycle(null); // 这里可能需要重新传入 getColor，或者在 main.js 里处理
+    // 確保循環在運行
+    if (!isDisplayLoopRunning) {
+        processDisplayQueue();
+    }
+
+    // 監控隊列何時徹底排空，然後恢復默認輪播
+    // 這裡做一個簡單的輪詢檢查
+    checkQueueEmpty();
+}
+
+function checkQueueEmpty() {
+    if (displayQueue.length === 0 && streamBuffer === "" && !isDisplayLoopRunning) {
+        isAIResponseMode = false;
+        defaultIndex = 0;
+        startDefaultCycle(null);
+    } else {
+        setTimeout(checkQueueEmpty, 1000);
+    }
+}
+
+// 舊接口改名或標記廢棄（為了兼容 main.js 調用，先留個空殼或報錯）
+// 實際上 main.js 會改用 appendAIResponse，所以這裡刪除舊 showAIResponse 邏輯
+export async function showAIResponse(fullText) {
+    console.warn("showAIResponse deprecated in streaming mode.");
 }
 
 // 显示加载状态

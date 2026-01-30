@@ -34,11 +34,16 @@ function incrementUsage() {
 /**
  * 核心请求函数
  */
-export async function askOracle(userContent) {
+/**
+ * 核心請求函数 (支持流式传输)
+ */
+export async function askOracle(userContent, onChunk) {
     // 1. 【限制机制】先检查今日运势余额
     if (!checkDailyLimit()) {
         console.log("今日次數已用完");
-        return "【卦限已盡】一日不過三，天機不可強求。\n請靜心修整，明日再來。";
+        // 为了兼容流式接口，这里直接调用一次回调并返回 void
+        if (onChunk) onChunk("【卦限已盡】一日不過三，天機不可強求。\n請靜心修整，明日再來。");
+        return;
     }
 
     try {
@@ -68,36 +73,48 @@ export async function askOracle(userContent) {
             throw new Error(errorMsg);
         }
 
-        // 4. 解析成功结果
-        const data = await response.json();
+        // 4. 解析流式结果
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder("utf-8");
 
-        // 5. 扣除次数（只有成功了才扣次数）
+        // 成功建立连接后，扣除次数
         incrementUsage();
 
-        return data.answer;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            if (onChunk) {
+                onChunk(chunk);
+            }
+        }
 
     } catch (error) {
         console.error("AI 請求失敗詳情:", error);
 
         // 6. 【错误反馈】根据不同类型的错误返回不同的话术
         const eMsg = error.message || "";
+        let finalMsg = "";
 
-        // 场景 A: Vercel 函数超时 (通常是 Vercel 的 10秒/60秒 限制)
+        // 场景 A: Vercel 函数超时
         if (eMsg.includes("504") || eMsg.includes("Task timed out")) {
-            return "【天機演算超時】問題過於深奧，伺服器算力過載。\n請嘗試簡化您的問題。";
+            finalMsg = "【天機演算超時】問題過於深奧，伺服器算力過載。\n請嘗試簡化您的問題。";
         }
-
-        // 场景 B: 后端明确返回了错误 (比如 API Key 挂了)
-        if (eMsg.includes("API key") || eMsg.includes("403")) {
-            return `【系統核心故障】密鑰驗證失敗。\n(調試信息: ${eMsg})`;
+        // 场景 B: 后端明确返回了错误
+        else if (eMsg.includes("API key") || eMsg.includes("403")) {
+            finalMsg = `【系統核心故障】密鑰驗證失敗。\n(調試信息: ${eMsg})`;
         }
-
         // 场景 C: 网络断了
-        if (eMsg.includes("Failed to fetch") || eMsg.includes("Network")) {
-            return "【信號阻斷】無法連接到賽博空間，請檢查您的網絡連接。";
+        else if (eMsg.includes("Failed to fetch") || eMsg.includes("Network")) {
+            finalMsg = "【信號阻斷】無法連接到賽博空間，請檢查您的網絡連接。";
+        }
+        // 场景 D: 其他未知错误
+        else {
+            finalMsg = `【系統干擾】遭遇未知異常，演算中斷。\n錯誤代碼：${eMsg.substring(0, 30)}...`;
         }
 
-        // 场景 D: 其他未知错误
-        return `【系統干擾】遭遇未知異常，演算中斷。\n錯誤代碼：${eMsg.substring(0, 30)}...`;
+        // 发生错误时，将错误信息作为一段文字传给 UI
+        if (onChunk) onChunk(finalMsg);
     }
 }

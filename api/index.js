@@ -69,16 +69,28 @@ export default async function handler(req, res) {
       用戶的問題是：${question}
     `;
 
-    // 5. 發送給 Google
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // 5. 發送給 Google (使用流式傳輸)
+    const result = await model.generateContentStream(prompt);
 
-    // 6. 返回結果
-    return res.status(200).json({ answer: text });
+    // 設置響應頭，表明這是流式數據
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+
+    for await (const chunk of result.stream) {
+      const chunkText = chunk.text();
+      res.write(chunkText);
+    }
+
+    res.end();
 
   } catch (error) {
     console.error("後端報錯:", error);
-    return res.status(500).json({ error: `天機演算失敗: ${error.message}` });
+    // 如果是流式傳輸中途報錯，可能需要特殊處理，這裡簡單返回錯誤文本
+    if (!res.headersSent) {
+      return res.status(500).json({ error: `天機演算失敗: ${error.message}` });
+    } else {
+      res.write(`\n[系統錯誤: ${error.message}]`);
+      res.end();
+    }
   }
 }
