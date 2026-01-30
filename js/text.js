@@ -115,6 +115,7 @@ async function startDefaultCycle(getColor) {
 let streamBuffer = "";
 let displayQueue = [];
 let isDisplayLoopRunning = false;
+let isLoadingSequenceActive = false; // 新增：标记加载动画是否正在播放
 
 // 接收來自後端的流式片段
 export function appendAIResponse(chunk) {
@@ -162,6 +163,10 @@ export function appendAIResponse(chunk) {
 
 // 處理顯示隊列
 async function processDisplayQueue() {
+    // 1. 如果加载动画还在播放，绝对不开始显示 AI 内容
+    //    等到加载动画结束时，会再次手动调用 processDisplayQueue
+    if (isLoadingSequenceActive) return;
+
     if (displayQueue.length === 0) {
         // 如果隊列空了，但緩衝區還有剩（比如最後一句沒有標點，或者流結束了）
         // 這裡需要外部通知流是否結束，暫時我們先假設只要隊列空了就等待
@@ -237,15 +242,45 @@ export async function showAIResponse(fullText) {
     console.warn("showAIResponse deprecated in streaming mode.");
 }
 
-// 显示加载状态
-export function showLoading() {
+// 显示加载状态 (拆分为两句)
+export async function showLoading() {
     isAIResponseMode = true;
+    isLoadingSequenceActive = true; // 锁定，阻止 AI 内容抢播
+
     if (currentTimeout) clearTimeout(currentTimeout);
     textElement.classList.remove('visible');
 
-    setTimeout(() => {
-        textElement.style.color = '#333';
-        textElement.innerHTML = "感應天道...<br>推演天機...";
-        textElement.classList.add('visible');
-    }, 1000);
+    // 等待上一句淡出
+    await new Promise(r => setTimeout(r, 1000));
+
+    // 1. 第一句：感应天道
+    textElement.style.color = '#333';
+    textElement.innerHTML = "感應天道...";
+    textElement.classList.add('visible');
+
+    // 显示 2 秒
+    await new Promise(r => setTimeout(r, 2000));
+    textElement.classList.remove('visible');
+
+    // 淡出等待 1 秒
+    await new Promise(r => setTimeout(r, 1000));
+
+    // 2. 第二句：推演天机
+    textElement.innerHTML = "推演天機...";
+    textElement.classList.add('visible');
+
+    // 显示 2 秒
+    await new Promise(r => setTimeout(r, 2000));
+    textElement.classList.remove('visible');
+
+    // 淡出等待 1 秒
+    await new Promise(r => setTimeout(r, 1000));
+
+    // 3. 加载动画结束，解锁
+    isLoadingSequenceActive = false;
+
+    // 此时如果缓冲队列里已经有 AI 返回的内容了，立即开始播放
+    if (displayQueue.length > 0) {
+        processDisplayQueue();
+    }
 }
