@@ -202,14 +202,20 @@ function animate() {
 animate();
 
 // --- 4. 事件监听 ---
+let resizeTimeout;
 window.addEventListener('resize', () => {
-    if (Math.abs(window.innerWidth - initialWindowWidth) > 100) {
-        initialWindowWidth = window.innerWidth;
-        initialWindowHeight = window.innerHeight;
-        isKeyboardOpen = false;
-        document.body.classList.remove('keyboard-active');
-    }
-    updateCameraPosition(false);
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        // 只有当尺寸变化超过阈值（防抖动），或者单纯为了响应旋转后的最终尺寸
+        // 这里主要逻辑是：旋转后宽高互换，通过延时确保获取到的是最终稳定的 innerWidth/Height
+        if (Math.abs(window.innerWidth - initialWindowWidth) > 50 || Math.abs(window.innerHeight - initialWindowHeight) > 50) {
+            initialWindowWidth = window.innerWidth;
+            initialWindowHeight = window.innerHeight;
+            isKeyboardOpen = false;
+            document.body.classList.remove('keyboard-active');
+        }
+        updateCameraPosition(false);
+    }, 500); // 500ms 防抖，等待旋转动画结束
 });
 
 if (window.visualViewport) {
