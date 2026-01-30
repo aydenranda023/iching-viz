@@ -79,6 +79,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error("後端報錯:", error);
-    return res.status(500).json({ error: "天機演算失敗，伺服器連接不穩定" });
+    return res.status(500).json({ error: `天機演算失敗: ${error.message}` });
   }
 }
