@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       （在這裡針對用戶的問題，給出一個溫暖、務實的建議，側重於心態調整和修身養性）
       
       ---書籍內容開始---
-      ${bookContent.substring(0, 150000)} 
+      ${bookContent.substring(0, 800000)} 
       ---書籍內容結束---
 
       用戶的問題是：${question}
